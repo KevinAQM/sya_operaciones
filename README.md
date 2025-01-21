@@ -1,4 +1,4 @@
-Software para el Area de Operaciones:
+*Software para el Area de Operaciones - Smont y Aragon SAC*
 
 - Aplicación escritorio: Windows
 - Aplicación móvil: Android
