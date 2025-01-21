@@ -9,7 +9,7 @@ from datetime import datetime
 import requests
 import json
 
-class FormularioApp(App):
+class ReporteObraApp(App):
     def build(self):
         # Contenedor principal
         self.root_widget = BoxLayout(orientation='vertical', spacing=10, padding=10)
@@ -132,4 +132,4 @@ class FormularioApp(App):
 
 
 if __name__ == '__main__':
-    FormularioApp().run()
+    ReporteObraApp().run()
