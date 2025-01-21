@@ -108,7 +108,7 @@ class FormularioApp(App):
             # Enviar datos al servidor
             try:
                 response = requests.post(
-                    "http://tu-servidor:puerto/recibir-datos",
+                    "http://127.0.0.1:5000/recibir-datos",
                     json=datos
                 )
                 if response.status_code == 200:
