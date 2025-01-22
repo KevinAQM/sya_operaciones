@@ -69,7 +69,7 @@ class ReporteObraApp(App):
                 size_hint=(None, None),
                 size=(400, 20),
                 pos_hint={'center_x': 0.5},
-                color=(0.9, 0.9, 1, 1),  # Azul claro
+                color=(1, 1, 1, 1),
                 font_size=18
             )
             form_layout.add_widget(label)
