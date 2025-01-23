@@ -146,9 +146,9 @@ class ReporteObraApp(App):
             # Enviar datos al servidor
             try:
                 response = requests.post(
-                    "http://127.0.0.1:5000/recibir-datos",
+                    "http://34.82.57.55:5000/recibir-datos",
                     json=datos,
-                    timeout=10
+                    timeout=20
                 )
                 if response.status_code == 200:
                     print("Datos enviados exitosamente")
