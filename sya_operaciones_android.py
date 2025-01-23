@@ -146,7 +146,7 @@ class ReporteObraApp(App):
             # Enviar datos al servidor
             try:
                 response = requests.post(
-                    "http://34.82.57.55:5000/recibir-datos",
+                    "http://34.67.103.132:5000/recibir-datos",
                     json=datos,
                     timeout=20
                 )

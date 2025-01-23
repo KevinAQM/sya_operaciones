@@ -3,7 +3,7 @@ import threading
 import openpyxl
 from datetime import datetime
 import os
-import logging  # Importar el módulo logging
+import logging
 
 app = Flask(__name__)
 EXCEL_FILE = "registros_trabajo.xlsx"
@@ -16,7 +16,7 @@ def inicializar_excel():
     if not os.path.exists(EXCEL_FILE):
         wb = openpyxl.Workbook()
         ws = wb.active
-        # Definir encabezados        
+        # Definir encabezados
         headers = [
             "Fecha Registro", "Código Obra", "Nombre Obra",
             "Código Ingeniero", "Nombre Ingeniero",
@@ -28,9 +28,8 @@ def inicializar_excel():
             "Tiempo Descanso", "Observaciones", "Plan Siguiente Día"
         ]
         ws.append(headers)
-        wb.save(EXCEL_FILE)   
-        
-        
+        wb.save(EXCEL_FILE)
+
 def procesar_datos(datos):
     try:
         wb = openpyxl.load_workbook(EXCEL_FILE)
@@ -77,20 +76,19 @@ def descargar_excel_flask():
         logging.error(f"Error al generar descarga de Excel: {str(e)}")
         return str(e), 500
 
-def iniciar_servidor():
-    @app.route('/recibir-datos', methods=['POST'])
-    def recibir_datos():
-        datos = request.json
-        procesar_datos(datos)
-        return jsonify({"status": "success"})
+# Inicializar Excel al inicio
+inicializar_excel()
 
-    @app.route('/descargar-excel')
-    def descargar_excel_route():
-        return descargar_excel_flask()
+@app.route('/recibir-datos', methods=['POST'])
+def recibir_datos():
+    datos = request.json
+    procesar_datos(datos)
+    return jsonify({"status": "success"})
 
-    # Inicializar Excel antes de iniciar el servidor
-    inicializar_excel()
-    app.run(host='0.0.0.0', port=5000)  # Escuchar en todas las interfaces
+@app.route('/descargar-excel', methods=['GET'])
+def descargar_excel_route():
+    return descargar_excel_flask()
 
 if __name__ == '__main__':
-    iniciar_servidor()
+    # app.run(host='0.0.0.0', port=5000)  # Eliminar app.run() y dejar que Gunicorn maneje la ejecución
+    pass

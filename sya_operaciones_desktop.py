@@ -14,6 +14,6 @@ def descargar_excel(url, nombre_archivo):
         print(f"Error al descargar el archivo: {e}")
 
 if __name__ == "__main__":
-    url_servidor = "http://34.82.57.55:5000/descargar-excel"  # Reemplazar con IP del servidor de la nube
+    url_servidor = "http://34.67.103.132:5000/descargar-excel"  # Reemplazar con IP del servidor de la nube
     nombre_archivo_local = "registros_trabajo_descargado.xlsx"
     descargar_excel(url_servidor, nombre_archivo_local)
