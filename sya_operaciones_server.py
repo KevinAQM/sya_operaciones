@@ -4,9 +4,11 @@ import openpyxl
 from datetime import datetime
 import os
 import logging
+import pandas as pd
 
 app = Flask(__name__)
 EXCEL_FILE = "registros_trabajo.xlsx"
+MATERIALES_CSV_PATH = "operaciones_materiales.csv"  # Ruta al archivo de materiales
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO,
@@ -79,6 +81,17 @@ def descargar_excel_flask():
 # Inicializar Excel al inicio
 inicializar_excel()
 
+@app.route('/api/materiales', methods=['GET'])
+def get_materiales():
+    try:
+        df = pd.read_csv(MATERIALES_CSV_PATH)
+        materiales = df.to_dict(orient='records')
+        return jsonify(materiales)
+    except FileNotFoundError:
+        return jsonify({"error": "No se encontró el archivo de materiales"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/recibir-datos', methods=['POST'])
 def recibir_datos():
     datos = request.json
@@ -90,5 +103,4 @@ def descargar_excel_route():
     return descargar_excel_flask()
 
 if __name__ == '__main__':
-    # app.run(host='0.0.0.0', port=5000)  # Eliminar app.run() y dejar que Gunicorn maneje la ejecución
-    pass
+    app.run(host='0.0.0.0', port=5000) 
