@@ -3,6 +3,14 @@
 - Aplicación móvil (Android):           sya_operaciones_android.py
 - Aplicación de escritorio (Windows):   sya_operaciones_desktop.py
 
+## Avance 27 enero 2025:
+- Trabajando en la ingesta de datos: Personal de Campo, Equipos/Herramientas, Materiales Usados, Vehículos usados.
+- Archivos Excel limpiados y estructurados --> xlsx, csv or db.
+
+## Avance 24 enero 2025:
+- Testing GCP Server
+- Reunion Ing. Huillca
+- Nuevos requirimientos.
 
 ## Avance 23 enero 2025:
 Intercomunicacion de prueba entre las tres aplicaciones, usando Google Cloud Platform como servidor.
