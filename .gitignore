@@ -1,5 +1,3 @@
 .venv/
 __pycache__/
 *.pyc
-registros_trabajo.xlsx
-registros_trabajo_descargado.xlsx
