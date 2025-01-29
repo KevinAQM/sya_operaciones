@@ -7,16 +7,13 @@ from kivy.uix.label import Label
 from kivy.uix.spinner import Spinner
 from kivy.uix.widget import Widget
 from kivy.uix.dropdown import DropDown
-from kivy.uix.relativelayout import RelativeLayout
 from kivy.core.window import Window
-from kivy.graphics import Color, Rectangle
 from datetime import datetime
 import requests
 import json
 import pandas as pd
 
-# Establecer colores de fondo de la ventana
-Window.clearcolor = (0.1, 0.1, 0.1, 1)  # Fondo negro
+Window.clearcolor = (0.1, 0.1, 0.1, 1)
 
 class CustomDropDown(DropDown):
     def __init__(self, **kwargs):
@@ -24,59 +21,53 @@ class CustomDropDown(DropDown):
         self.auto_width = False
         self.width = 400
 
+class MaterialEntry:
+    def __init__(self, nombre, unidad, cantidad):
+        self.nombre = nombre
+        self.unidad = unidad
+        self.cantidad = cantidad
+
+    def to_dict(self):
+        return {
+            "nombre": self.nombre,
+            "unidad": self.unidad,
+            "cantidad": self.cantidad
+        }
+
 class ReporteObraApp(App):
     title = "Parte Diario de Obra"
 
     def build(self):
-        # Cargar lista de materiales desde el servidor al iniciar la app
-        self.get_materiales_from_server()
-
-        # Contenedor principal
+        # Main container setup remains the same
         self.root_widget = BoxLayout(orientation='vertical', spacing=10, padding=20)
-        
-        # Crear ScrollView para el formulario
         scroll = ScrollView(size_hint=(1, 0.9))
-
-        # Crear un layout para el formulario
         form_layout = BoxLayout(orientation='vertical', spacing=10, size_hint_y=None, padding=10)
         form_layout.bind(minimum_height=form_layout.setter("height"))
         
-        # Diccionario para almacenar las respuestas
         self.respuestas = {}
-        self.materiales_seleccionados = []  # Lista para almacenar los materiales seleccionados
+        self.materiales_seleccionados = []  # Will store MaterialEntry objects
         
-        # Lista de campos del formulario
+        # Define form fields
         self.campos = [
             {"nombre": "codigo_obra", "tipo": "text", "etiqueta": "Código de Obra"},
-            {"nombre": "nombre_obra", "tipo": "text", "etiqueta": "Nombre de Obra"},
-            {"nombre": "codigo_ingeniero", "tipo": "text", "etiqueta": "Código de Ingeniero"},
+            {"nombre": "actividad_principal", "tipo": "text", "etiqueta": "Actividad Principal"},
             {"nombre": "nombre_ingeniero", "tipo": "text", "etiqueta": "Nombre del Ingeniero"},
+            {"nombre": "nombre_supervisor", "tipo": "text", "etiqueta": "Nombre del Supervisor"},
             {"nombre": "fecha", "tipo": "date", "etiqueta": "Fecha"},
             {"nombre": "materiales_usados", "tipo": "material", "etiqueta": "Materiales Usados"},
-            {"nombre": "cantidad_material1", "tipo": "float", "etiqueta": "Cantidad Material 1 (kg)"},
-            {"nombre": "cantidad_material2", "tipo": "float", "etiqueta": "Cantidad Material 2 (L)"},
-            {"nombre": "equipo1_usado", "tipo": "bool", "etiqueta": "¿Se usó Equipo 1?"},
-            {"nombre": "equipo2_usado", "tipo": "bool", "etiqueta": "¿Se usó Equipo 2?"},
-            {"nombre": "num_trabajadores", "tipo": "float", "etiqueta": "Número de Trabajadores"},
             {"nombre": "horas_trabajo", "tipo": "float", "etiqueta": "Horas de Trabajo"},
-            {"nombre": "area_trabajada", "tipo": "float", "etiqueta": "Área Trabajada (m²)"},
-            {"nombre": "calidad_trabajo", "tipo": "text", "etiqueta": "Calidad del Trabajo"},
             {"nombre": "incidentes", "tipo": "bool", "etiqueta": "¿Hubo Incidentes?"},
-            {"nombre": "clima", "tipo": "text", "etiqueta": "Condiciones Climáticas"},
             {"nombre": "equipos_seguridad", "tipo": "bool", "etiqueta": "¿Equipos de Seguridad Completos?"},
             {"nombre": "supervisor_presente", "tipo": "bool", "etiqueta": "¿Supervisor Presente?"},
-            {"nombre": "material_restante", "tipo": "float", "etiqueta": "Material Restante (kg)"},
-            {"nombre": "tiempo_descanso", "tipo": "float", "etiqueta": "Tiempo de Descanso (min)"},
-            {"nombre": "observaciones", "tipo": "text", "etiqueta": "Observaciones"},
-            {"nombre": "siguiente_dia", "tipo": "text", "etiqueta": "Plan para Siguiente Día"}
+            {"nombre": "material_restante", "tipo": "float", "etiqueta": "¿Material Restante?"},
+            {"nombre": "siguiente_dia", "tipo": "text", "etiqueta": "Plan para Siguiente Día"},
+            {"nombre": "observaciones", "tipo": "text", "etiqueta": "Observaciones"}
         ]
         
-        # Crear campos del formulario
+        # Create form fields
         for campo in self.campos:
-            # Crear un espacio pequeño antes de cada etiqueta
-            form_layout.add_widget(Widget(size_hint_y=None, height=5))  # Espacio pequeño
+            form_layout.add_widget(Widget(size_hint_y=None, height=5))
             
-            # Crear etiqueta
             label = Label(
                 text=campo["etiqueta"],
                 size_hint=(None, None),
@@ -87,7 +78,6 @@ class ReporteObraApp(App):
             )
             form_layout.add_widget(label)
             
-            # Crear input según el tipo
             if campo["tipo"] == "bool":
                 input_widget = Spinner(
                     text='Sí',
@@ -95,11 +85,12 @@ class ReporteObraApp(App):
                     size_hint=(None, None),
                     size=(400, 40),
                     pos_hint={'center_x': 0.5},
-                    background_color=(0.75, 0.75, 0.75, 1),  # Gris claro
-                    color=(1, 1, 1, 1)  # Blanco
+                    background_color=(0.75, 0.75, 0.75, 1),
+                    color=(1, 1, 1, 1)
                 )
                 self.respuestas[campo["nombre"]] = input_widget
                 form_layout.add_widget(input_widget)
+            
             elif campo["tipo"] == "material":
                 self.setup_material_input(form_layout)
 
@@ -109,53 +100,49 @@ class ReporteObraApp(App):
                     size_hint=(None, None),
                     size=(400, 40),
                     pos_hint={'center_x': 0.5},
-                    background_color=(1, 1, 1, 1),  # Blanco
-                    foreground_color=(0, 0, 0, 1)  # Negro
+                    background_color=(1, 1, 1, 1),
+                    foreground_color=(0, 0, 0, 1)
                 )
                 if campo["nombre"] == "fecha":
                     input_widget.text = datetime.now().strftime('%d/%m/%Y')
                 self.respuestas[campo["nombre"]] = input_widget
                 form_layout.add_widget(input_widget)
 
-        # Agregar espacio antes del botón de envío
-        form_layout.add_widget(Widget(size_hint_y=None, height=10))  # Espacio antes del botón 
+        form_layout.add_widget(Widget(size_hint_y=None, height=10))
 
-        # Botón de envío
         btn_enviar = Button(
             text='Enviar Datos',
             size_hint=(None, None),
             size=(200, 40),
             pos_hint={'center_x': 0.5},
-            background_color=(0, 0.5, 1, 1),  # Azul intenso
-            color=(1, 1, 1, 1),  # Blanco
+            background_color=(0, 0.5, 1, 1),
+            color=(1, 1, 1, 1),
             on_press=self.confirmar_envio
         )
         form_layout.add_widget(btn_enviar)
 
-        # Agregar el formulario al ScrollView
         scroll.add_widget(form_layout)
-
-        # Agregar el ScrollView al layout principal
         self.root_widget.add_widget(scroll)
+        self.get_materiales_from_server()
 
         return self.root_widget
 
     def get_materiales_from_server(self):
         try:
-            response = requests.get("http://34.67.103.132:5000/api/materiales", timeout=10) # Ajusta la URL a tu servidor
-            response.raise_for_status()  # Lanza excepción si la respuesta no es 200 OK
+            response = requests.get("http://34.67.103.132:5000/api/materiales", timeout=10)
+            response.raise_for_status()
             materiales = response.json()
             self.materiales_df = pd.DataFrame(materiales)
+            print("Materiales cargados exitosamente.")
         except requests.exceptions.RequestException as e:
             print(f"Error al obtener materiales del servidor: {e}")
             self.materiales_df = pd.DataFrame(columns=['index', 'nombre_material', 'unidad'])
 
     def setup_material_input(self, form_layout):
-        # Layout para el campo de materiales
         materiales_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None)
         materiales_layout.bind(minimum_height=materiales_layout.setter("height"))
 
-        # TextInput para buscar materiales
+        # Search input for materials
         self.material_input = TextInput(
             hint_text="Escriba el nombre del material",
             multiline=False,
@@ -168,16 +155,30 @@ class ReporteObraApp(App):
         self.material_input.bind(text=self.on_material_text)
         materiales_layout.add_widget(self.material_input)
 
-        # Dropdown para sugerencias de materiales
+        # Dropdown for material suggestions
         self.dropdown = CustomDropDown()
-        self.dropdown.bind(on_select=lambda instance, x: setattr(self.material_input, 'text', x))
         self.material_input.bind(focus=self.on_focus)
 
-        # Layout para mostrar los materiales seleccionados
-        self.selected_materials_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None)
-        self.selected_materials_layout.bind(minimum_height=self.selected_materials_layout.setter("height"))
-        materiales_layout.add_widget(self.selected_materials_layout)
+        # Layout for quantity input (will be shown after material selection)
+        self.quantity_layout = BoxLayout(
+            orientation='horizontal',
+            size_hint=(None, None),
+            size=(400, 40),
+            pos_hint={'center_x': 0.5}
+        )
 
+        # Layout for selected materials
+        self.selected_materials_layout = BoxLayout(
+            orientation='vertical',
+            spacing=5,
+            size_hint_y=None
+        )
+        self.selected_materials_layout.bind(
+            minimum_height=self.selected_materials_layout.setter("height")
+        )
+        
+        materiales_layout.add_widget(self.quantity_layout)
+        materiales_layout.add_widget(self.selected_materials_layout)
         form_layout.add_widget(materiales_layout)
 
     def on_focus(self, instance, value):
@@ -189,41 +190,111 @@ class ReporteObraApp(App):
     def on_material_text(self, instance, value):
         self.dropdown.clear_widgets()
         if value and hasattr(self, 'materiales_df'):
-            filtered_materials = self.materiales_df[self.materiales_df['nombre_material'].str.contains(value, case=False)]
-            for index, row in filtered_materials.iterrows():
-                btn = Button(text=f"{row['nombre_material']} ({row['unidad']})", size_hint_y=None, height=40)
-                btn.bind(on_release=lambda btn: self.select_material(btn.text))
+            filtered_materials = self.materiales_df[
+                self.materiales_df['nombre_material'].str.contains(value, case=False)
+            ]
+            for _, row in filtered_materials.iterrows():
+                btn = Button(
+                    text=f"{row['nombre_material']}",
+                    size_hint_y=None,
+                    height=40
+                )
+                btn.bind(
+                    on_release=lambda btn, row=row: self.show_quantity_input(
+                        row['nombre_material'],
+                        row['unidad']
+                    )
+                )
                 self.dropdown.add_widget(btn)
 
-    def select_material(self, material_str):
-        if material_str not in self.materiales_seleccionados:
-            self.materiales_seleccionados.append(material_str)
+    def show_quantity_input(self, material_name, unit):
+        self.dropdown.dismiss()
+        self.material_input.text = material_name
+        
+        # Clear previous quantity input if exists
+        self.quantity_layout.clear_widgets()
+        
+        # Create quantity input
+        quantity_input = TextInput(
+            hint_text=f"Cantidad ({unit})",
+            multiline=False,
+            size_hint_x=0.7,
+            background_color=(1, 1, 1, 1),
+            foreground_color=(0, 0, 0, 1)
+        )
+        
+        # Add button
+        add_button = Button(
+            text="Agregar",
+            size_hint_x=0.3,
+            background_color=(0, 0.7, 0, 1)
+        )
+        
+        # Bind add button to add material with quantity
+        add_button.bind(
+            on_release=lambda x: self.add_material_with_quantity(
+                material_name,
+                unit,
+                quantity_input.text
+            )
+        )
+        
+        self.quantity_layout.add_widget(quantity_input)
+        self.quantity_layout.add_widget(add_button)
+
+    def add_material_with_quantity(self, material_name, unit, quantity_text):
+        try:
+            quantity = float(quantity_text)
+            material_entry = MaterialEntry(material_name, unit, quantity)
+            self.materiales_seleccionados.append(material_entry)
             
-            # Crear un layout para el material seleccionado con un botón para eliminar
-            material_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=40)
-            material_label = Label(text=material_str, size_hint_x=0.8)
-            remove_button = Button(text='X', size_hint_x=0.2, background_color=(1, 0, 0, 1))
-            remove_button.bind(on_release=lambda btn: self.remove_material(material_str, material_layout))
+            # Create layout for the selected material entry
+            material_layout = BoxLayout(
+                orientation='horizontal',
+                size_hint_y=None,
+                height=40
+            )
+            
+            # Label showing material info
+            material_label = Label(
+                text=f"{material_name} - {quantity} {unit}",
+                size_hint_x=0.8
+            )
+            
+            # Remove button
+            remove_button = Button(
+                text='X',
+                size_hint_x=0.2,
+                background_color=(1, 0, 0, 1)
+            )
+            remove_button.bind(
+                on_release=lambda btn: self.remove_material(material_entry, material_layout)
+            )
 
             material_layout.add_widget(material_label)
             material_layout.add_widget(remove_button)
             self.selected_materials_layout.add_widget(material_layout)
+            
+            # Clear quantity input and material input after successful addition
+            self.quantity_layout.clear_widgets()
+            self.material_input.text = ""
+            
+        except ValueError:
+            print("Por favor ingrese una cantidad válida")
 
-            self.material_input.text = ''  # Limpiar el input después de seleccionar
-
-    def remove_material(self, material_str, material_layout):
-        self.materiales_seleccionados.remove(material_str)
+    def remove_material(self, material_entry, material_layout):
+        self.materiales_seleccionados.remove(material_entry)
         self.selected_materials_layout.remove_widget(material_layout)
 
     def confirmar_envio(self, instance):
-        # Validar datos
-        datos_validos = self.validar_datos()
-        if datos_validos:
-            # Crear diccionario con los datos
+        if self.validar_datos():
             datos = {}
             for campo in self.campos:
                 if campo["nombre"] == "materiales_usados":
-                    datos[campo["nombre"]] = ", ".join(self.materiales_seleccionados)
+                    # Convert material entries to list of dictionaries
+                    datos[campo["nombre"]] = [
+                        material.to_dict() for material in self.materiales_seleccionados
+                    ]
                 else:
                     valor = self.respuestas[campo["nombre"]].text
                     if campo["tipo"] == "float":
@@ -235,10 +306,8 @@ class ReporteObraApp(App):
                         valor = valor == "Sí"
                     datos[campo["nombre"]] = valor
 
-            # Agregar fecha y hora actual
             datos["timestamp"] = datetime.now().isoformat()
 
-            # Enviar datos al servidor
             try:
                 response = requests.post(
                     "http://34.67.103.132:5000/recibir-datos",
@@ -247,7 +316,6 @@ class ReporteObraApp(App):
                 )
                 if response.status_code == 200:
                     print("Datos enviados exitosamente")
-                    # Limpiar los materiales seleccionados después del envío
                     self.materiales_seleccionados = []
                     self.selected_materials_layout.clear_widgets()
                 else:
