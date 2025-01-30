@@ -8,11 +8,11 @@
 
 ## Avance 28 enero 2025:
 - Trabajando en el excel que genera el servidor para recibir correctamente los datos de los formularios.
-- El archivo excel tiene las siguientes hojas: Reporte Principal, Materiales Usados, Equipos/Herramientas, Personal de Campo, Vehículos Usados.
+- El archivo excel tiene las siguientes hojas: Reporte Principal, Materiales Usados, Equipos Usados, Vehículos Usados y Personal de Campo.
 - Implementacion completa de Reporte Principal.
 
 ## Avance 27 enero 2025:
-- Trabajando en la ingesta de datos: Materiales Usados, Equipos/Herramientas, Personal de Campo, Vehículos Usados.
+- Trabajando en la ingesta de datos: Materiales Usados, Equipos Usados, Vehículos Usados y Personal de Campo.
 - Archivos Excel limpiados y estructurados --> xlsx, csv or db.
 
 ## Avance 24 enero 2025:
