@@ -1,5 +1,4 @@
 from flask import Flask, request, jsonify, send_file
-import threading
 import openpyxl
 from datetime import datetime
 import os
@@ -7,8 +6,11 @@ import logging
 import pandas as pd
 
 app = Flask(__name__)
-EXCEL_FILE = "registros_trabajo.xlsx"
-MATERIALES_CSV_PATH = "operaciones_materiales.csv"  # Ruta al archivo de materiales
+
+# Usar una ruta absoluta para el archivo Excel
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+EXCEL_FILE = os.path.join(BASE_DIR, "registros_trabajo.xlsx")
+MATERIALES_CSV_PATH = os.path.join(BASE_DIR, "operaciones_materiales.csv")
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO,
@@ -16,54 +18,96 @@ logging.basicConfig(level=logging.INFO,
 
 def inicializar_excel():
     if not os.path.exists(EXCEL_FILE):
+        logging.info(f"Creando archivo Excel en: {EXCEL_FILE}")
         wb = openpyxl.Workbook()
-        ws = wb.active
-        # Definir encabezados
-        headers = [
-            "Fecha Registro", "Código Obra", "Nombre Obra",
-            "Código Ingeniero", "Nombre Ingeniero",
-            "Fecha Trabajo", "Cantidad Material 1",
-            "Cantidad Material 2", "Equipo 1 Usado", "Equipo 2 Usado",
-            "Número Trabajadores", "Horas Trabajo", "Área Trabajada",
-            "Calidad Trabajo", "Incidentes", "Clima",
-            "Equipos Seguridad", "Supervisor Presente", "Material Restante",
-            "Tiempo Descanso", "Observaciones", "Plan Siguiente Día"
+        # Hoja "Reporte Principal"
+        ws1 = wb.active
+        ws1.title = "Reporte Principal"
+        headers_reporte = [
+            "Fecha", "Código Obra", "Nombre Ingeniero",
+            "Nombre Supervisor", "Actividad Principal",
+            "Supervisor Presente", "Equipos Seguridad Completos",
+            "Incidentes", "Plan Siguiente Día", "Observaciones"
         ]
-        ws.append(headers)
+        ws1.append(headers_reporte)
+
+        # Hoja "Materiales Usados"
+        ws2 = wb.create_sheet(title="Materiales Usados")
+        headers_materiales = [
+            "Fecha", "Código Obra", "Nombre Ingeniero"
+        ]
+        ws2.append(headers_materiales)
+
         wb.save(EXCEL_FILE)
+    else:
+        logging.info(f"El archivo Excel ya existe en: {EXCEL_FILE}")
+
+def actualizar_cabeceras_materiales(ws, num_materiales):
+    headers = ws[1]  # Obtener la primera fila (cabeceras)
+    num_headers_actuales = len(headers)
+
+    # Encontrar el último número de material existente
+    ultimo_material = 0
+    for header in headers:
+        header_value = header.value
+        if header_value and header_value.startswith("Material"):
+            try:
+                numero = int(header_value.split(" ")[1])
+                ultimo_material = max(ultimo_material, numero)
+            except ValueError:
+                pass
+
+    # Si ya hay suficientes cabeceras, no hacer nada
+    # Se verifica que el ultimo material ya sea mayor o igual a num_materiales
+    if ultimo_material >= num_materiales:
+        return
+
+    # Agregar las cabeceras faltantes
+    # Se itera solo hasta num_materiales
+    for i in range(ultimo_material + 1, num_materiales + 1):
+        ws.cell(row=1, column=num_headers_actuales + 1, value=f"Material {i}")
+        ws.cell(row=1, column=num_headers_actuales + 2, value=f"Unidad {i}")
+        ws.cell(row=1, column=num_headers_actuales + 3, value=f"Cantidad {i}")
+        num_headers_actuales += 3
 
 def procesar_datos(datos):
     try:
         wb = openpyxl.load_workbook(EXCEL_FILE)
-        ws = wb.active
+        ws_reporte = wb["Reporte Principal"]
+        ws_materiales = wb["Materiales Usados"]
 
-        # Preparar fila de datos
-        fila = [
-            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        # Preparar fila de datos para "Reporte Principal"
+        fila_reporte = [
+            # Formatear la fecha como DATE en "Reporte Principal"
+            datetime.strptime(datos.get('fecha', ''), '%d/%m/%Y').date(),  # Fecha como date
             datos.get('codigo_obra', ''),
-            datos.get('nombre_obra', ''),
-            datos.get('codigo_ingeniero', ''),
             datos.get('nombre_ingeniero', ''),
-            datos.get('fecha', ''),
-            datos.get('cantidad_material1', 0),
-            datos.get('cantidad_material2', 0),
-            'Sí' if datos.get('equipo1_usado', False) else 'No',
-            'Sí' if datos.get('equipo2_usado', False) else 'No',
-            datos.get('num_trabajadores', 0),
-            datos.get('horas_trabajo', 0),
-            datos.get('area_trabajada', 0),
-            datos.get('calidad_trabajo', ''),
-            'Sí' if datos.get('incidentes', False) else 'No',
-            datos.get('clima', ''),
-            'Sí' if datos.get('equipos_seguridad', False) else 'No',
+            datos.get('nombre_supervisor', ''),
+            datos.get('actividad_principal', ''),
             'Sí' if datos.get('supervisor_presente', False) else 'No',
-            datos.get('material_restante', 0),
-            datos.get('tiempo_descanso', 0),
-            datos.get('observaciones', ''),
-            datos.get('siguiente_dia', '')
+            'Sí' if datos.get('equipos_seguridad', False) else 'No',
+            datos.get('incidentes', ''),
+            datos.get('siguiente_dia', ''),
+            datos.get('observaciones', '')
         ]
+        ws_reporte.append(fila_reporte)
 
-        ws.append(fila)
+        # Procesar materiales usados para "Materiales Usados"
+        materiales = datos.get('materiales_usados', [])
+
+        # Actualizar cabeceras de materiales si es necesario
+        actualizar_cabeceras_materiales(ws_materiales, len(materiales))
+
+        fila_materiales = [
+            # Convertir la fecha al formato correcto para "Materiales Usados"
+            datetime.strptime(datos.get('fecha', ''), '%d/%m/%Y').date(),
+            datos.get('codigo_obra', ''),
+            datos.get('nombre_ingeniero', '')
+        ]
+        for material in materiales:
+            fila_materiales.extend([material['nombre'], material['unidad'], material['cantidad']])
+        ws_materiales.append(fila_materiales)
+
         wb.save(EXCEL_FILE)
 
         logging.info(f"Datos recibidos de {datos.get('nombre_ingeniero', 'Unknown')} procesados exitosamente")
@@ -73,6 +117,7 @@ def procesar_datos(datos):
 
 def descargar_excel_flask():
     try:
+        logging.info(f"Intentando enviar archivo: {EXCEL_FILE}")
         return send_file(EXCEL_FILE, as_attachment=True)
     except Exception as e:
         logging.error(f"Error al generar descarga de Excel: {str(e)}")
@@ -88,7 +133,7 @@ def get_materiales():
         materiales = df.to_dict(orient='records')
         return jsonify(materiales)
     except FileNotFoundError:
-        return jsonify({"error": "No se encontró el archivo de materiales"}), 404
+        return jsonify({"error": f"No se encontró el archivo de materiales en {MATERIALES_CSV_PATH}"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -103,4 +148,4 @@ def descargar_excel_route():
     return descargar_excel_flask()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000) 
+    app.run(host='0.0.0.0', port=5000)
