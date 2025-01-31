@@ -80,6 +80,19 @@ class MaterialEntry:
             "cantidad": self.cantidad
         }
 
+class EquipoEntry:
+    def __init__(self, nombre, cantidad, propiedad):
+        self.nombre = nombre
+        self.cantidad = cantidad
+        self.propiedad = propiedad
+
+    def to_dict(self):
+        return {
+            "nombre": self.nombre,
+            "cantidad": self.cantidad,
+            "propiedad": self.propiedad
+        }
+
 class MaterialSelectionPopup(Popup):
     def __init__(self, add_callback, main_app, **kwargs):
         super(MaterialSelectionPopup, self).__init__(**kwargs)
@@ -322,6 +335,274 @@ class MaterialSelectionPopup(Popup):
         # Actualizar la visualización de materiales seleccionados en el popup
         self.update_selected_materials_display()
 
+        # Actualizar la lista de materiales en la pantalla principal
+        self.main_app.selected_materials_layout.clear_widgets()
+        for mat in self.main_app.materiales_seleccionados:
+            mat_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(40))
+            mat_label = Label(text=f"{mat.nombre} - {mat.cantidad} {mat.unidad}", size_hint_x=0.8)
+            remove_btn = create_button('X', size=(dp(40), dp(40)), color=RED, on_press=lambda btn: self.main_app.remove_material(mat, mat_layout))
+            remove_btn.size_hint_x = 0.2
+            mat_layout.add_widget(mat_label)
+            mat_layout.add_widget(remove_btn)
+            self.main_app.selected_materials_layout.add_widget(mat_layout)
+
+
+class EquipoSelectionPopup(Popup):
+    def __init__(self, add_callback, main_app, **kwargs):
+        super(EquipoSelectionPopup, self).__init__(**kwargs)
+        self.title = "Selección de Equipos"  # Cambiado a Equipos
+        self.size_hint = (0.9, 0.8)
+        self.add_callback = add_callback
+        self.main_app = main_app
+
+        # Layout principal
+        layout = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(10))
+
+        # Campo de búsqueda con ícono
+        search_layout = BoxLayout(size_hint_y=None, height=dp(40))
+        search_icon = Button(
+            background_normal='search_icon.png',
+            size_hint=(None, None),
+            size=(dp(40), dp(40))
+        )
+        self.search_input = TextInput(
+            hint_text='Buscar equipo...',  # Cambiado a equipo
+            multiline=False,
+            size_hint=(1, None),
+            height=dp(40)
+        )
+        search_layout.add_widget(search_icon)
+        search_layout.add_widget(self.search_input)
+
+        # Lista de equipos con scroll (para la búsqueda)
+        scroll = ScrollView()
+        self.equipos_list = GridLayout(  # Cambiado a equipos_list
+            cols=1,
+            spacing=dp(5),
+            size_hint_y=None,
+            padding=dp(5)
+        )
+        self.equipos_list.bind(minimum_height=self.equipos_list.setter('height'))
+        scroll.add_widget(self.equipos_list)
+
+        # Área para mostrar los equipos seleccionados
+        self.selected_equipos_scroll = ScrollView()
+        self.selected_equipos_grid = GridLayout(  # Cambiado a selected_equipos_grid
+            cols=1,
+            spacing=dp(5),
+            size_hint_y=None,
+            padding=dp(5)
+        )
+        self.selected_equipos_grid.bind(
+            minimum_height=self.selected_equipos_grid.setter('height')
+        )
+        self.selected_equipos_scroll.add_widget(self.selected_equipos_grid)
+
+        # Sección de equipo seleccionado (para ingresar propiedad y cantidad)
+        selection_layout = GridLayout(
+            cols=2,
+            spacing=dp(10),
+            size_hint_y=None,
+            height=dp(120),
+            padding=dp(10)
+        )
+
+        # Campos para el equipo seleccionado
+        self.equipo_name = Label(text="Equipo: ")  # Cambiado a equipo_name
+        self.propiedad_input = TextInput(  # Cambiado a propiedad_input
+            hint_text='Propiedad',
+            multiline=False,
+            size_hint_y=None,
+            height=dp(40)
+        )
+        self.quantity_input = TextInput(
+            hint_text='Cantidad',
+            multiline=False,
+            input_filter='float',
+            size_hint_y=None,
+            height=dp(40)
+        )
+
+        selection_layout.add_widget(Label(text="Propiedad:"))  # Cambiado a Propiedad
+        selection_layout.add_widget(self.propiedad_input)
+        selection_layout.add_widget(Label(text="Cantidad:"))
+        selection_layout.add_widget(self.quantity_input)
+
+        # Botones de acción
+        buttons_layout = BoxLayout(
+            size_hint_y=None,
+            height=dp(50),
+            spacing=dp(10)
+        )
+
+        cancel_button = Button(
+            text='Cancelar',
+            size_hint_x=0.5,
+            background_color=RED
+        )
+        add_button = Button(
+            text='Agregar Equipo',  # Cambiado a Agregar Equipo
+            size_hint_x=0.5,
+            background_color=GREEN
+        )
+        finish_button = Button(
+            text='Terminar',
+            size_hint_x=0.5,
+            background_color=BTN_COLOR
+        )
+
+        cancel_button.bind(on_release=self.dismiss)
+        add_button.bind(on_release=self.add_equipo)  # Cambiado a add_equipo
+        finish_button.bind(on_release=self.dismiss)
+
+        buttons_layout.add_widget(cancel_button)
+        buttons_layout.add_widget(add_button)
+        buttons_layout.add_widget(finish_button)
+
+        # Agregar todos los elementos al layout principal
+        layout.add_widget(search_layout)
+        layout.add_widget(scroll)
+        layout.add_widget(self.selected_equipos_scroll)
+        layout.add_widget(selection_layout)
+        layout.add_widget(buttons_layout)
+
+        self.content = layout
+        self.search_input.bind(text=self.on_search_text)
+
+        # Actualizar la lista de equipos seleccionados al iniciar el popup
+        self.update_selected_equipos_display()
+
+    def on_search_text(self, instance, value):
+        self.equipos_list.clear_widgets()
+        if not value:
+            return
+
+        # Filtrar equipos existentes
+        filtered_equipos = [  # Cambiado a filtered_equipos
+            e for e in self.main_app.equipos_df['nombre_equipo'].tolist()
+            if value.lower() in e.lower()
+        ]
+
+        # Agregar equipos filtrados
+        for equipo in filtered_equipos:
+            btn = Button(
+                text=equipo,
+                size_hint_y=None,
+                height=dp(40),
+                background_color=GRAY
+            )
+            btn.bind(on_release=lambda btn: self.select_equipo(btn.text))  # Cambiado a select_equipo
+            self.equipos_list.add_widget(btn)
+
+        # Agregar opción de nuevo equipo si no hay coincidencia exacta
+        if value and value not in filtered_equipos:
+            new_btn = Button(
+                text=f"Agregar nuevo equipo: {value}",  # Cambiado a equipo
+                size_hint_y=None,
+                height=dp(40),
+                background_color=GREEN
+            )
+            new_btn.bind(on_release=lambda btn: self.select_new_equipo(value))  # Cambiado a select_new_equipo
+            self.equipos_list.add_widget(new_btn)
+
+    def select_equipo(self, equipo_name):
+        self.equipo_name.text = f"Equipo: {equipo_name}"
+        # Actualiza la propiedad si es un equipo existente
+        if equipo_name in self.main_app.equipos_df['nombre_equipo'].tolist():
+            propiedad = 'Propio' if self.main_app.equipos_df[
+                self.main_app.equipos_df['nombre_equipo'] == equipo_name
+            ]['propiedad'].iloc[0] else 'Alquilado'
+            self.propiedad_input.text = propiedad
+            self.propiedad_input.readonly = True
+        else:
+            self.propiedad_input.readonly = False
+            self.propiedad_input.text = ""
+
+        # Limpia la lista de equipos
+        self.equipos_list.clear_widgets()
+        # Actualiza el campo de búsqueda con el equipo seleccionado
+        self.search_input.text = equipo_name
+
+    def select_new_equipo(self, equipo_name):
+        self.equipo_name.text = f"Equipo: {equipo_name}"
+        self.propiedad_input.readonly = False
+        self.propiedad_input.text = ""
+
+        # Limpia la lista de equipos
+        self.equipos_list.clear_widgets()
+        # Actualiza el campo de búsqueda con el equipo seleccionado
+        self.search_input.text = equipo_name
+
+    def add_equipo(self, *args):
+        equipo_name = self.equipo_name.text.replace("Equipo: ", "")
+        propiedad = self.propiedad_input.text
+        quantity = self.quantity_input.text
+
+        if not all([equipo_name, propiedad, quantity]):
+            return
+
+        try:
+            quantity = float(quantity)
+            self.add_callback(equipo_name, quantity, propiedad)
+            # Limpia el campo de búsqueda después de agregar el equipo
+            self.search_input.text = ''
+            self.propiedad_input.text = ''
+            self.quantity_input.text = ''
+            self.equipo_name.text = 'Equipo: '
+            # Actualiza la lista de equipos seleccionados
+            self.update_selected_equipos_display()
+        except ValueError:
+            print("Por favor ingrese una cantidad válida")
+
+    def update_selected_equipos_display(self):
+        self.selected_equipos_grid.clear_widgets()  # Limpia la lista actual
+
+        for equipo in self.main_app.equipos_seleccionados:
+            equipo_layout = BoxLayout(
+                orientation='horizontal',
+                size_hint_y=None,
+                height=dp(40)
+            )
+            equipo_label = Label(
+                # Corregir: mostrar la propiedad
+                text=f"{equipo.nombre} - {equipo.cantidad} ({equipo.propiedad})",
+                size_hint_x=0.8
+            )
+            remove_button = create_button(
+                'X',
+                size=(dp(40), dp(40)),
+                color=RED,
+                # Corregir: pasar equipo y equipo_layout a la función
+                on_press=lambda btn, e=equipo, l=equipo_layout: self.remove_equipo_from_popup(e, l)
+            )
+            remove_button.size_hint_x = 0.2
+
+            equipo_layout.add_widget(equipo_label)
+            equipo_layout.add_widget(remove_button)
+            self.selected_equipos_grid.add_widget(equipo_layout)
+
+    def remove_equipo_from_popup(self, equipo_entry, equipo_layout):
+        # Eliminar el equipo de la lista de equipos seleccionados en la app principal
+        self.main_app.equipos_seleccionados.remove(equipo_entry)
+
+        # Eliminar el layout del equipo del grid en el popup
+        self.selected_equipos_grid.remove_widget(equipo_layout)
+
+        # Actualizar la visualización de equipos seleccionados en el popup
+        self.update_selected_equipos_display()
+
+        # Actualizar la lista de equipos en la pantalla principal
+        self.main_app.selected_equipos_layout.clear_widgets()
+        for eq in self.main_app.equipos_seleccionados:
+            eq_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(40))
+            eq_label = Label(text=f"{eq.nombre} - {eq.cantidad} ({eq.propiedad})", size_hint_x=0.8)
+            remove_btn = create_button('X', size=(dp(40), dp(40)), color=RED, on_press=lambda btn: self.main_app.remove_equipo(eq, eq_layout))
+            remove_btn.size_hint_x = 0.2
+            eq_layout.add_widget(eq_label)
+            eq_layout.add_widget(remove_btn)
+            self.main_app.selected_equipos_layout.add_widget(eq_layout)
+
+
 class ReporteObraApp(App):
     title = "Parte Diario de Obra"
 
@@ -333,7 +614,9 @@ class ReporteObraApp(App):
 
         self.respuestas = {}
         self.materiales_seleccionados = []
-        self.materiales_df = pd.DataFrame() # Initialize to avoid errors
+        self.equipos_seleccionados = []
+        self.materiales_df = pd.DataFrame()
+        self.equipos_df = pd.DataFrame()
 
         # Definir campos del formulario
         self.campos = [
@@ -343,6 +626,7 @@ class ReporteObraApp(App):
             {"nombre": "nombre_supervisor", "tipo": "text", "etiqueta": "Nombre del Supervisor"},
             {"nombre": "actividad_principal", "tipo": "text", "etiqueta": "Actividad Principal (trabajo realizado)"},
             {"nombre": "materiales_usados", "tipo": "material", "etiqueta": "Materiales Usados"},
+            {"nombre": "equipos_usados", "tipo": "equipo", "etiqueta": "Equipos Usados"}, # Nuevo campo
             {"nombre": "supervisor_presente", "tipo": "bool", "etiqueta": "¿Supervisor Presente?"},
             {"nombre": "equipos_seguridad", "tipo": "bool", "etiqueta": "¿Equipos de Seguridad Completos?"},
             {"nombre": "incidentes", "tipo": "text", "etiqueta": "Incidentes ocurridos"},
@@ -355,13 +639,16 @@ class ReporteObraApp(App):
             form_layout.add_widget(Widget(size_hint_y=None, height=5)) # Espaciador
 
             if campo["nombre"] == "materiales_usados":
-                # Agregar Label para materiales usados ANTES del setup_material_input
                 form_layout.add_widget(create_label(campo["etiqueta"]))
                 self.setup_material_input(form_layout)
-                continue # Sigue al proximo campo
+                continue
+
+            elif campo["nombre"] == "equipos_usados": # Nuevo
+                form_layout.add_widget(create_label(campo["etiqueta"]))
+                self.setup_equipo_input(form_layout)
+                continue
 
             else:
-                # Agregar Label para todos los campos excepto materiales_usados
                 form_layout.add_widget(create_label(campo["etiqueta"]))
 
                 if campo["tipo"] == "bool":
@@ -389,7 +676,17 @@ class ReporteObraApp(App):
         scroll.add_widget(form_layout)
         self.root_widget.add_widget(scroll)
         self.get_materiales_from_server()
-
+        self.get_equipos_from_server()
+        
+        self.material_popup = MaterialSelectionPopup(
+            add_callback=self.add_material_with_quantity,
+            main_app=self
+        )
+        self.equipo_popup = EquipoSelectionPopup(
+            add_callback=self.add_equipo_with_quantity,
+            main_app=self
+        )
+        
         return self.root_widget
 
     def get_materiales_from_server(self):
@@ -407,6 +704,22 @@ class ReporteObraApp(App):
         except requests.exceptions.RequestException as e:
             print(f"Error al obtener materiales del servidor: {e}")
             self.materiales_df = pd.DataFrame(columns=['index', 'nombre_material', 'unidad'])
+
+    def get_equipos_from_server(self):
+        try:
+            response = requests.get(f"{API_URL}/api/equipos", timeout=10)
+            response.raise_for_status()
+            self.equipos_df = pd.DataFrame(response.json())
+            print("Equipos cargados exitosamente.")
+        except requests.exceptions.ConnectionError:
+            print(f"Error: No se pudo conectar al servidor.")
+            self.equipos_df = pd.DataFrame(columns=['index', 'nombre_equipo', 'propiedad'])
+        except requests.exceptions.Timeout:
+            print(f"Error: Tiempo de espera agotado al conectar al servidor.")
+            self.equipos_df = pd.DataFrame(columns=['index', 'nombre_equipo', 'propiedad'])
+        except requests.exceptions.RequestException as e:
+            print(f"Error al obtener equipos del servidor: {e}")
+            self.equipos_df = pd.DataFrame(columns=['index', 'nombre_equipo', 'propiedad'])
 
     def setup_material_input(self, form_layout):
         # Layout principal para el campo de materiales
@@ -441,22 +754,46 @@ class ReporteObraApp(App):
         # Agrega el layout de materiales al layout principal del formulario
         form_layout.add_widget(material_layout)
 
-    def show_material_popup(self, instance):
-        popup = MaterialSelectionPopup(
-            add_callback=self.add_material_with_quantity,
-            main_app=self  # Pasa la referencia de ReporteObraApp
+    def setup_equipo_input(self, form_layout):
+        equipo_layout = BoxLayout(
+            orientation='vertical',
+            spacing=dp(5),
+            size_hint_y=None
         )
-        # Se actualiza la lista de materiales del popup al ser creado
-        popup.update_selected_materials_display()
-        popup.open()
+        equipo_layout.bind(minimum_height=equipo_layout.setter("height"))
+
+        open_popup_button = create_button(
+            'Seleccionar Equipos',
+            size=(400, 50),
+            color=BTN_COLOR,
+            on_press=self.show_equipo_popup
+        )
+        equipo_layout.add_widget(open_popup_button)
+
+        self.selected_equipos_layout = BoxLayout(
+            orientation='vertical',
+            spacing=dp(5),
+            size_hint_y=None
+        )
+        self.selected_equipos_layout.bind(
+            minimum_height=self.selected_equipos_layout.setter("height")
+        )
+
+        equipo_layout.add_widget(self.selected_equipos_layout)
+        form_layout.add_widget(equipo_layout)
+
+    def show_material_popup(self, instance):
+        self.material_popup.open()
+
+    def show_equipo_popup(self, instance):
+        self.equipo_popup.open()
     
     def on_focus(self, instance, value):
         if value:
             self.dropdown.open(instance)
         else:
             self.dropdown.dismiss()
-            
-    
+
     def on_material_text(self, instance, value):
         self.dropdown.clear_widgets()
         if value and not self.materiales_df.empty:
@@ -579,9 +916,14 @@ class ReporteObraApp(App):
         self.quantity_layout.add_widget(quantity_input)
         self.quantity_layout.add_widget(add_button)
 
-
     def add_material_with_quantity(self, material_name, unit, quantity):
-        material_entry = MaterialEntry(material_name, unit, quantity)
+        try:
+            quantity_float = float(quantity)
+        except ValueError:
+            print("Cantidad inválida. Por favor, ingrese un número.")
+            return
+        
+        material_entry = MaterialEntry(material_name, unit, quantity_float)
         self.materiales_seleccionados.append(material_entry)
 
         # Actualizar UI
@@ -592,7 +934,7 @@ class ReporteObraApp(App):
         )
         
         material_label = Label(
-            text=f"{material_name} - {quantity} {unit}",
+            text=f"{material_name} - {quantity_float} {unit}",
             size_hint_x=0.8
         )
         remove_button = create_button(
@@ -606,23 +948,60 @@ class ReporteObraApp(App):
         material_layout.add_widget(material_label)
         material_layout.add_widget(remove_button)
         self.selected_materials_layout.add_widget(material_layout)
+        self.material_popup.update_selected_materials_display()
+
+    def add_equipo_with_quantity(self, equipo_name, cantidad, propiedad):
+        equipo_entry = EquipoEntry(equipo_name, cantidad, propiedad)
+        self.equipos_seleccionados.append(equipo_entry)
+
+        equipo_layout = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(40)
+        )
+        equipo_label = Label(
+            text=f"{equipo_name} - {cantidad} ({'Propio' if propiedad else 'Alquilado'})",
+            size_hint_x=0.8
+        )
+        remove_button = create_button(
+            'X',
+            size=(dp(40), dp(40)),
+            color=RED,
+            on_press=lambda btn: self.remove_equipo(equipo_entry, equipo_layout)
+        )
+        remove_button.size_hint_x = 0.2
+
+        equipo_layout.add_widget(equipo_label)
+        equipo_layout.add_widget(remove_button)
+        self.selected_equipos_layout.add_widget(equipo_layout)
+        self.equipo_popup.update_selected_equipos_display()
 
     def remove_material(self, material_entry, material_layout):
         self.materiales_seleccionados.remove(material_entry)
         self.selected_materials_layout.remove_widget(material_layout)
+        self.material_popup.update_selected_materials_display()
+
+    def remove_equipo(self, equipo_entry, equipo_layout):
+        self.equipos_seleccionados.remove(equipo_entry)
+        self.selected_equipos_layout.remove_widget(equipo_layout)
+        self.equipo_popup.update_selected_equipos_display()
 
     def confirmar_envio(self, instance):
         if not self.validar_datos():
             return
         
         datos = {
-            campo["nombre"]: ([material.to_dict() for material in self.materiales_seleccionados]
-                            if campo["nombre"] == "materiales_usados"
-                            else (self.respuestas[campo["nombre"]].text == "Sí"
-                                    if campo["tipo"] == "bool"
-                                    else (float(self.respuestas[campo["nombre"]].text)
-                                        if campo["tipo"] == "float"
-                                        else self.respuestas[campo["nombre"]].text)))
+            campo["nombre"]: (
+                [material.to_dict() for material in self.materiales_seleccionados]
+                if campo["nombre"] == "materiales_usados"
+                else [equipo.to_dict() for equipo in self.equipos_seleccionados] # Nuevo
+                if campo["nombre"] == "equipos_usados" # Nuevo
+                else (self.respuestas[campo["nombre"]].text == "Sí"
+                      if campo["tipo"] == "bool"
+                      else (float(self.respuestas[campo["nombre"]].text)
+                            if campo["tipo"] == "float"
+                            else self.respuestas[campo["nombre"]].text))
+            )
             for campo in self.campos
         }       
                 
@@ -631,7 +1010,9 @@ class ReporteObraApp(App):
             if response.status_code == 200:
                 print("Datos enviados exitosamente")
                 self.materiales_seleccionados = []
+                self.equipos_seleccionados = []
                 self.selected_materials_layout.clear_widgets()
+                self.selected_equipos_layout.clear_widgets()
             else:
                 print(f"Error al enviar datos: {response.status_code} - {response.text}")
         except requests.exceptions.ConnectionError:
@@ -646,6 +1027,10 @@ class ReporteObraApp(App):
             if campo["nombre"] == "materiales_usados":
                 if not self.materiales_seleccionados:
                     print("Debe seleccionar al menos un material.")
+                    return False
+            elif campo["nombre"] == "equipos_usados": # Nuevo
+                if not self.equipos_seleccionados:
+                    print("Debe seleccionar al menos un equipo.")
                     return False
             else:
                 valor = self.respuestas[campo["nombre"]].text

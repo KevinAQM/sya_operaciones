@@ -11,6 +11,7 @@ app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 EXCEL_FILE = os.path.join(BASE_DIR, "registros_trabajo.xlsx")
 MATERIALES_CSV_PATH = os.path.join(BASE_DIR, "operaciones_materiales.csv")
+EQUIPOS_CSV_PATH = os.path.join(BASE_DIR, "operaciones_equipos.csv")
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO,
@@ -37,6 +38,13 @@ def inicializar_excel():
             "Fecha", "Código Obra", "Nombre Ingeniero"
         ]
         ws2.append(headers_materiales)
+
+        # Hoja "Equipos Usados"
+        ws3 = wb.create_sheet(title="Equipos Usados")
+        headers_equipos = [
+            "Fecha", "Código Obra", "Nombre Ingeniero"
+        ]
+        ws3.append(headers_equipos)
 
         wb.save(EXCEL_FILE)
     else:
@@ -70,11 +78,35 @@ def actualizar_cabeceras_materiales(ws, num_materiales):
         ws.cell(row=1, column=num_headers_actuales + 3, value=f"Cantidad {i}")
         num_headers_actuales += 3
 
+def actualizar_cabeceras_equipos(ws, num_equipos):
+    headers = ws[1]
+    num_headers_actuales = len(headers)
+
+    ultimo_equipo = 0
+    for header in headers:
+        header_value = header.value
+        if header_value and header_value.startswith("Equipo"):
+            try:
+                numero = int(header_value.split(" ")[1])
+                ultimo_equipo = max(ultimo_equipo, numero)
+            except ValueError:
+                pass
+
+    if ultimo_equipo >= num_equipos:
+        return
+
+    for i in range(ultimo_equipo + 1, num_equipos + 1):
+        ws.cell(row=1, column=num_headers_actuales + 1, value=f"Equipo {i}")
+        ws.cell(row=1, column=num_headers_actuales + 2, value=f"Cantidad {i}")
+        ws.cell(row=1, column=num_headers_actuales + 3, value=f"Propiedad {i}")
+        num_headers_actuales += 3
+
 def procesar_datos(datos):
     try:
         wb = openpyxl.load_workbook(EXCEL_FILE)
         ws_reporte = wb["Reporte Principal"]
         ws_materiales = wb["Materiales Usados"]
+        ws_equipos = wb["Equipos Usados"]
 
         # Preparar fila de datos para "Reporte Principal"
         fila_reporte = [
@@ -108,6 +140,18 @@ def procesar_datos(datos):
             fila_materiales.extend([material['nombre'], material['unidad'], material['cantidad']])
         ws_materiales.append(fila_materiales)
 
+        # Procesar equipos usados
+        equipos = datos.get('equipos_usados', [])
+        actualizar_cabeceras_equipos(ws_equipos, len(equipos))
+        fila_equipos = [
+            datetime.strptime(datos.get('fecha', ''), '%d/%m/%Y').date(),
+            datos.get('codigo_obra', ''),
+            datos.get('nombre_ingeniero', '')
+        ]
+        for equipo in equipos:
+            fila_equipos.extend([equipo['nombre'], equipo['cantidad'], equipo['propiedad']])
+        ws_equipos.append(fila_equipos)
+
         wb.save(EXCEL_FILE)
 
         logging.info(f"Datos recibidos de {datos.get('nombre_ingeniero', 'Unknown')} procesados exitosamente")
@@ -134,6 +178,17 @@ def get_materiales():
         return jsonify(materiales)
     except FileNotFoundError:
         return jsonify({"error": f"No se encontró el archivo de materiales en {MATERIALES_CSV_PATH}"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/equipos', methods=['GET']) # Nuevo endpoint
+def get_equipos():
+    try:
+        df = pd.read_csv(EQUIPOS_CSV_PATH)
+        equipos = df.to_dict(orient='records')
+        return jsonify(equipos)
+    except FileNotFoundError:
+        return jsonify({"error": f"No se encontró el archivo de equipos en {EQUIPOS_CSV_PATH}"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
