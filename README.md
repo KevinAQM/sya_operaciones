@@ -3,6 +3,10 @@
 - Aplicación móvil (Android):           sya_operaciones_android.py
 - Aplicación de escritorio (Windows):   sya_operaciones_desktop.py
 
+## Avance 30 enero 2025:
+- Implementando Equipos Usados, Vehículos Usados y Personal de Campo.
+- Reunion Ing. Huillca
+
 ## Avance 29 enero 2025:
 - Implementacion completa de Materiales Usados.
 
