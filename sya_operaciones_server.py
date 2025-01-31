@@ -12,6 +12,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 EXCEL_FILE = os.path.join(BASE_DIR, "registros_trabajo.xlsx")
 MATERIALES_CSV_PATH = os.path.join(BASE_DIR, "operaciones_materiales.csv")
 EQUIPOS_CSV_PATH = os.path.join(BASE_DIR, "operaciones_equipos.csv")
+VEHICULOS_CSV_PATH = os.path.join(BASE_DIR, "operaciones_vehiculos.csv")
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO,
@@ -45,6 +46,13 @@ def inicializar_excel():
             "Fecha", "Código Obra", "Nombre Ingeniero"
         ]
         ws3.append(headers_equipos)
+
+        # Hoja "Vehículos Usados"
+        ws4 = wb.create_sheet(title="Vehículos Usados")  # Nueva línea
+        headers_vehiculos = [  # Nueva línea
+            "Fecha", "Código Obra", "Nombre Ingeniero"  # Nueva línea
+        ]  # Nueva línea
+        ws4.append(headers_vehiculos)  # Nueva línea
 
         wb.save(EXCEL_FILE)
     else:
@@ -101,12 +109,37 @@ def actualizar_cabeceras_equipos(ws, num_equipos):
         ws.cell(row=1, column=num_headers_actuales + 3, value=f"Propiedad {i}")
         num_headers_actuales += 3
 
+def actualizar_cabeceras_vehiculos(ws, num_vehiculos):  # Nueva función
+    headers = ws[1]
+    num_headers_actuales = len(headers)
+
+    ultimo_vehiculo = 0
+    for header in headers:
+        header_value = header.value
+        if header_value and header_value.startswith("Vehículo"):
+            try:
+                numero = int(header_value.split(" ")[1])
+                ultimo_vehiculo = max(ultimo_vehiculo, numero)
+            except ValueError:
+                pass
+
+    if ultimo_vehiculo >= num_vehiculos:
+        return
+
+    for i in range(ultimo_vehiculo + 1, num_vehiculos + 1):
+        ws.cell(row=1, column=num_headers_actuales + 1, value=f"Vehículo {i}")
+        ws.cell(row=1, column=num_headers_actuales + 2, value=f"Placa {i}")
+        ws.cell(row=1, column=num_headers_actuales + 3, value=f"Propiedad {i}")
+        num_headers_actuales += 3
+
 def procesar_datos(datos):
     try:
         wb = openpyxl.load_workbook(EXCEL_FILE)
         ws_reporte = wb["Reporte Principal"]
         ws_materiales = wb["Materiales Usados"]
         ws_equipos = wb["Equipos Usados"]
+        ws_vehiculos = wb["Vehículos Usados"]  # Nueva línea
+
 
         # Preparar fila de datos para "Reporte Principal"
         fila_reporte = [
@@ -152,8 +185,19 @@ def procesar_datos(datos):
             fila_equipos.extend([equipo['nombre'], equipo['cantidad'], equipo['propiedad']])
         ws_equipos.append(fila_equipos)
 
-        wb.save(EXCEL_FILE)
+        # Procesar vehículos usados
+        vehiculos = datos.get('vehiculos_usados', [])  # Nueva línea
+        actualizar_cabeceras_vehiculos(ws_vehiculos, len(vehiculos))  # Nueva línea
+        fila_vehiculos = [  # Nueva línea
+            datetime.strptime(datos.get('fecha', ''), '%d/%m/%Y').date(),  # Nueva línea
+            datos.get('codigo_obra', ''),  # Nueva línea
+            datos.get('nombre_ingeniero', '')  # Nueva línea
+        ]  # Nueva línea
+        for vehiculo in vehiculos:  # Nueva línea
+            fila_vehiculos.extend([vehiculo['nombre'], vehiculo['placa'], vehiculo['propiedad']])  # Nueva línea
+        ws_vehiculos.append(fila_vehiculos)  # Nueva línea
 
+        wb.save(EXCEL_FILE)
         logging.info(f"Datos recibidos de {datos.get('nombre_ingeniero', 'Unknown')} procesados exitosamente")
 
     except Exception as e:
@@ -192,7 +236,18 @@ def get_equipos():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/recibir-datos', methods=['POST'])
+@app.route('/api/vehiculos', methods=['GET'])  # Nuevo endpoint
+def get_vehiculos():
+    try:
+        df = pd.read_csv(VEHICULOS_CSV_PATH)
+        vehiculos = df.to_dict(orient='records')
+        return jsonify(vehiculos)
+    except FileNotFoundError:
+        return jsonify({"error": f"No se encontró el archivo de vehículos en {VEHICULOS_CSV_PATH}"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/recibir-datos', methods=['POST'])z
 def recibir_datos():
     datos = request.json
     procesar_datos(datos)
