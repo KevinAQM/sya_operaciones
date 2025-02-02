@@ -106,6 +106,20 @@ class VehiculoEntry:
             "propiedad": self.propiedad
         }
 
+class PersonalEntry:
+    def __init__(self, nombre_completo, categoria, horas_extras):
+        self.nombre_completo = nombre_completo
+        self.categoria = categoria
+        self.horas_extras = horas_extras
+
+    def to_dict(self):
+        return {
+            "nombre_completo": self.nombre_completo,
+            "categoria": self.categoria,
+            "horas_extras": self.horas_extras
+        }
+
+
 class MaterialSelectionPopup(Popup):
     def __init__(self, add_callback, main_app, **kwargs):
         super(MaterialSelectionPopup, self).__init__(**kwargs)
@@ -120,7 +134,7 @@ class MaterialSelectionPopup(Popup):
         # Campo de búsqueda con ícono
         search_layout = BoxLayout(size_hint_y=None, height=dp(40))
         search_icon = Button(
-            background_normal='search_icon.png',  # Asegúrate de tener este ícono
+            background_normal='search_icon.png',
             size_hint=(None, None),
             size=(dp(40), dp(40))
         )
@@ -320,11 +334,14 @@ class MaterialSelectionPopup(Popup):
             material_layout = BoxLayout(
                 orientation='horizontal',
                 size_hint_y=None,
-                height=dp(40)
+                height=dp(50)
             )
             material_label = Label(
-                text=f"{material.nombre} - {material.cantidad} {material.unidad}",
-                size_hint_x=0.8
+                text=f"{material.nombre}\n{material.cantidad} {material.unidad}",
+                size_hint_x=None,
+                width=400 * 0.8,
+                halign='left',
+                text_size=(400 * 0.8, None)
             )
             remove_button = create_button(
                 'X',
@@ -411,7 +428,6 @@ class EquipoSelectionPopup(Popup):
         self.selected_equipos_scroll.add_widget(self.selected_equipos_grid)
 
         # Sección de equipo seleccionado (para ingresar propiedad y cantidad)
-        # Usar GridLayout de 2 columnas
         selection_layout = GridLayout(
             cols=2,
             spacing=dp(10),
@@ -574,11 +590,14 @@ class EquipoSelectionPopup(Popup):
             equipo_layout = BoxLayout(
                 orientation='horizontal',
                 size_hint_y=None,
-                height=dp(40)
+                height=dp(50)
             )
             equipo_label = Label(
-                text=f"{equipo.nombre} - {equipo.cantidad} ({equipo.propiedad})",
-                size_hint_x=0.8
+                text=f"{equipo.nombre} ({equipo.propiedad})\n{equipo.cantidad} und",
+                size_hint_x=None,
+                width=400 * 0.8,
+                halign='left',
+                text_size=(400 * 0.8, None)
             )
             remove_button = create_button(
                 'X',
@@ -675,23 +694,23 @@ class VehiculoSelectionPopup(Popup):
 
         # Campos para el vehículo seleccionado
         self.vehiculo_name = Label(text="Vehículo: ")
-        self.placa_input = TextInput(
-            hint_text='Placa',
-            multiline=False,
-            size_hint_y=None,
-            height=dp(40)
-        )
         self.propiedad_input = TextInput(
             hint_text='Propiedad',
             multiline=False,
             size_hint_y=None,
             height=dp(40)
         )
+        self.placa_input = TextInput(
+            hint_text='Placa',
+            multiline=False,
+            size_hint_y=None,
+            height=dp(40)
+        )
 
-        selection_layout.add_widget(Label(text="Placa:"))
-        selection_layout.add_widget(self.placa_input)
         selection_layout.add_widget(Label(text="Propiedad:"))
         selection_layout.add_widget(self.propiedad_input)
+        selection_layout.add_widget(Label(text="Placa:"))
+        selection_layout.add_widget(self.placa_input)
 
         # Botones de acción
         buttons_layout = BoxLayout(
@@ -831,11 +850,14 @@ class VehiculoSelectionPopup(Popup):
             vehiculo_layout = BoxLayout(
                 orientation='horizontal',
                 size_hint_y=None,
-                height=dp(40)
+                height=dp(50)
             )
             vehiculo_label = Label(
-                text=f"{vehiculo.nombre} ({vehiculo.placa}) - {vehiculo.propiedad}",
-                size_hint_x=0.8
+                text=f"{vehiculo.nombre} ({vehiculo.propiedad})\nPlaca: {vehiculo.placa}",
+                size_hint_x=None,
+                width=400 * 0.8,
+                halign='left',
+                text_size=(400 * 0.8, None)
             )
             remove_button = create_button(
                 'X',
@@ -870,6 +892,267 @@ class VehiculoSelectionPopup(Popup):
             v_layout.add_widget(remove_btn)
             self.main_app.selected_vehiculos_layout.add_widget(v_layout)
 
+class PersonalSelectionPopup(Popup):
+    def __init__(self, add_callback, main_app, **kwargs):
+        super(PersonalSelectionPopup, self).__init__(**kwargs)
+        self.title = "Selección de Personal de Campo"
+        self.size_hint = (0.9, 0.8)
+        self.add_callback = add_callback
+        self.main_app = main_app
+
+        # Layout principal
+        layout = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(10))
+
+        # Campo de búsqueda con ícono
+        search_layout = BoxLayout(size_hint_y=None, height=dp(40))
+        search_icon = Button(
+            background_normal='search_icon.png',
+            size_hint=(None, None),
+            size=(dp(40), dp(40))
+        )
+        self.search_input = TextInput(
+            hint_text='Buscar personal...',
+            multiline=False,
+            size_hint=(1, None),
+            height=dp(40)
+        )
+        search_layout.add_widget(search_icon)
+        search_layout.add_widget(self.search_input)
+
+        # Lista de personal con scroll (para la búsqueda)
+        scroll = ScrollView()
+        self.personal_list = GridLayout(
+            cols=1,
+            spacing=dp(5),
+            size_hint_y=None,
+            padding=dp(5)
+        )
+        self.personal_list.bind(minimum_height=self.personal_list.setter('height'))
+        scroll.add_widget(self.personal_list)
+
+        # Área para mostrar el personal seleccionado
+        self.selected_personal_scroll = ScrollView()
+        self.selected_personal_grid = GridLayout(
+            cols=1,
+            spacing=dp(5),
+            size_hint_y=None,
+            padding=dp(5)
+        )
+        self.selected_personal_grid.bind(
+            minimum_height=self.selected_personal_grid.setter('height')
+        )
+        self.selected_personal_scroll.add_widget(self.selected_personal_grid)
+
+        # Sección de personal seleccionado (para ingresar horas extras)
+        selection_layout = GridLayout(
+            cols=2,
+            spacing=dp(10),
+            size_hint_y=None,
+            height=dp(120),
+            padding=dp(10)
+        )
+
+        # Campos para el personal seleccionado
+        self.personal_name = Label(text="Personal: ")
+        self.categoria_input = TextInput(
+            hint_text='Categoría',
+            multiline=False,
+            size_hint_y=None,
+            height=dp(40),
+        )
+        self.horas_extras_input = TextInput(
+            hint_text='Horas Extras',
+            multiline=False,
+            input_filter='float',
+            size_hint_y=None,
+            height=dp(40)
+        )
+
+        selection_layout.add_widget(Label(text="Categoría:"))
+        selection_layout.add_widget(self.categoria_input)
+        selection_layout.add_widget(Label(text="Horas Extras:"))
+        selection_layout.add_widget(self.horas_extras_input)
+
+        # Botones de acción
+        buttons_layout = BoxLayout(
+            size_hint_y=None,
+            height=dp(50),
+            spacing=dp(10)
+        )
+
+        cancel_button = Button(
+            text='Cancelar',
+            size_hint_x=0.5,
+            background_color=RED
+        )
+        add_button = Button(
+            text='Agregar Personal',
+            size_hint_x=0.5,
+            background_color=GREEN
+        )
+        finish_button = Button(
+            text='Terminar',
+            size_hint_x=0.5,
+            background_color=BTN_COLOR
+        )
+
+        cancel_button.bind(on_release=self.dismiss)
+        add_button.bind(on_release=self.add_personal)
+        finish_button.bind(on_release=self.dismiss)
+
+        buttons_layout.add_widget(cancel_button)
+        buttons_layout.add_widget(add_button)
+        buttons_layout.add_widget(finish_button)
+
+        # Agregar todos los elementos al layout principal
+        layout.add_widget(search_layout)
+        layout.add_widget(scroll)
+        layout.add_widget(self.selected_personal_scroll)
+        layout.add_widget(selection_layout)
+        layout.add_widget(buttons_layout)
+
+        self.content = layout
+        self.search_input.bind(text=self.on_search_text)
+
+        # Actualizar la lista de personal seleccionado al iniciar el popup
+        self.update_selected_personal_display()
+
+    def on_search_text(self, instance, value):
+        self.personal_list.clear_widgets()
+        if not value:
+            return
+
+        # Filtrar personal existente
+        filtered_personal = [
+            p for p in self.main_app.personal_df['NOMBRE_COMPLETO'].tolist()
+            if value.lower() in p.lower()
+        ]
+
+        # Agregar personal filtrado
+        for personal in filtered_personal:
+            btn = Button(
+                text=personal,
+                size_hint_y=None,
+                height=dp(40),
+                background_color=GRAY
+            )
+            btn.bind(on_release=lambda btn: self.select_personal(btn.text))
+            self.personal_list.add_widget(btn)
+
+        # Agregar opción de nuevo personal si no hay coincidencia exacta
+        if value and value not in filtered_personal:
+            new_btn = Button(
+                text=f"Agregar nuevo personal: {value}",
+                size_hint_y=None,
+                height=dp(40),
+                background_color=GREEN
+            )
+            new_btn.bind(on_release=lambda btn: self.select_new_personal(value))
+            self.personal_list.add_widget(new_btn)
+
+    def select_personal(self, personal_name):
+        self.personal_name.text = f"Personal: {personal_name}"
+        # Actualiza la categoría si es personal existente
+        if personal_name in self.main_app.personal_df['NOMBRE_COMPLETO'].tolist():
+            categoria_personal = self.main_app.personal_df[
+                self.main_app.personal_df['NOMBRE_COMPLETO'] == personal_name
+            ]['CATEGORIA'].iloc[0]
+            self.categoria_input.text = categoria_personal
+            self.categoria_input.readonly = True
+            self.selected_categoria = categoria_personal
+        else:
+            self.categoria_input.text = ""
+            self.categoria_input.readonly = False
+            self.selected_categoria = None
+
+        # Limpia la lista de personal
+        self.personal_list.clear_widgets()
+        # Actualiza el campo de búsqueda con el personal seleccionado
+        self.search_input.text = personal_name
+
+    def select_new_personal(self, personal_name):
+        self.personal_name.text = f"Personal: {personal_name}"
+        self.categoria_input.readonly = False
+        self.categoria_input.text = "" 
+        self.selected_categoria = None
+
+        self.personal_list.clear_widgets()
+        self.search_input.text = personal_name
+
+    def add_personal(self, *args):
+        personal_name = self.personal_name.text.replace("Personal: ", "")
+        horas_extras = self.horas_extras_input.text
+        categoria_ingresada = self.categoria_input.text  # Obtener la categoría ingresada por el usuario
+
+        if not all([personal_name, horas_extras]):
+            return
+
+        try:
+            horas_extras = float(horas_extras)
+            # Usar la categoría ingresada si se proporcionó, de lo contrario usar "N/A" si no se ingresó nada para nuevo personal
+            categoria = categoria_ingresada if categoria_ingresada else "N/A"
+            self.add_callback(personal_name, categoria, horas_extras)  # Pasar la categoría, ya sea ingresada o "N/A"
+            # Limpia el campo de búsqueda después de agregar el personal
+            self.search_input.text = ''
+            self.horas_extras_input.text = ''
+            self.categoria_input.text = '' # Limpiar también el campo categoría
+            self.personal_name.text = 'Personal: '
+            self.selected_categoria = None
+            # Actualiza la lista de personal seleccionado
+            self.update_selected_personal_display()
+        except ValueError:
+            print("Por favor ingrese horas extras válidas")
+
+    def update_selected_personal_display(self):
+        self.selected_personal_grid.clear_widgets()  # Limpia la lista actual
+
+        for personal in self.main_app.personal_seleccionados:
+            personal_layout = BoxLayout(
+                orientation='horizontal',
+                size_hint_y=None,
+                height=dp(50)
+            )
+            personal_label = Label(
+                text=f"{personal.nombre_completo}\nCat: {personal.categoria} - HE: {personal.horas_extras}",
+                size_hint_x=None,
+                width=400 * 0.8,
+                halign='left',
+                text_size=(400 * 0.8, None)
+            )
+            remove_button = create_button(
+                'X',
+                size=(dp(40), dp(40)),
+                color=RED,
+                on_press=lambda btn, p=personal, l=personal_layout: self.remove_personal_from_popup(p, l)
+            )
+            remove_button.size_hint_x = 0.2
+
+            personal_layout.add_widget(personal_label)
+            personal_layout.add_widget(remove_button)
+            self.selected_personal_grid.add_widget(personal_layout)
+
+    def remove_personal_from_popup(self, personal_entry, personal_layout):
+        # Eliminar el personal de la lista de personal seleccionado en la app principal
+        self.main_app.personal_seleccionados.remove(personal_entry)
+
+        # Eliminar el layout del personal del grid en el popup
+        self.selected_personal_grid.remove_widget(personal_layout)
+
+        # Actualizar la visualización de personal seleccionado en el popup
+        self.update_selected_personal_display()
+
+        # Actualizar la lista de personal en la pantalla principal
+        self.main_app.selected_personal_layout.clear_widgets()
+        for pers in self.main_app.personal_seleccionados:
+            pers_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(40))
+            pers_label = Label(text=f"{pers.nombre_completo} - Cat: {pers.categoria} - HE: {pers.horas_extras}", size_hint_x=0.8)
+            remove_btn = create_button('X', size=(dp(40), dp(40)), color=RED, on_press=lambda btn: self.main_app.remove_personal(pers, pers_layout))
+            remove_btn.size_hint_x = 0.2
+            pers_layout.add_widget(pers_label)
+            pers_layout.add_widget(remove_btn)
+            self.main_app.selected_personal_layout.add_widget(pers_layout)
+
+
 class ReporteObraApp(App):
     title = "Parte Diario de Obra"
 
@@ -883,9 +1166,11 @@ class ReporteObraApp(App):
         self.materiales_seleccionados = []
         self.equipos_seleccionados = []
         self.vehiculos_seleccionados = []
+        self.personal_seleccionados = []
         self.materiales_df = pd.DataFrame()
         self.equipos_df = pd.DataFrame()
         self.vehiculos_df = pd.DataFrame()
+        self.personal_df = pd.DataFrame()
 
         # Definir campos del formulario
         self.campos = [
@@ -897,6 +1182,7 @@ class ReporteObraApp(App):
             {"nombre": "materiales_usados", "tipo": "material", "etiqueta": "Materiales Usados"},
             {"nombre": "equipos_usados", "tipo": "equipo", "etiqueta": "Equipos Usados"},
             {"nombre": "vehiculos_usados", "tipo": "vehiculo", "etiqueta": "Vehículos Usados"},
+            {"nombre": "personal_de_campo", "tipo": "personal", "etiqueta": "Personal de Campo"},
             {"nombre": "supervisor_presente", "tipo": "bool", "etiqueta": "¿Supervisor Presente?"},
             {"nombre": "equipos_seguridad", "tipo": "bool", "etiqueta": "¿Equipos de Seguridad Completos?"},
             {"nombre": "incidentes", "tipo": "text", "etiqueta": "Incidentes ocurridos"},
@@ -921,6 +1207,11 @@ class ReporteObraApp(App):
             elif campo["nombre"] == "vehiculos_usados":
                 form_layout.add_widget(create_label(campo["etiqueta"]))
                 self.setup_vehiculo_input(form_layout)
+                continue
+
+            elif campo["nombre"] == "personal_de_campo":
+                form_layout.add_widget(create_label(campo["etiqueta"]))
+                self.setup_personal_input(form_layout)
                 continue
 
             else:
@@ -953,6 +1244,7 @@ class ReporteObraApp(App):
         self.get_materiales_from_server()
         self.get_equipos_from_server()
         self.get_vehiculos_from_server()
+        self.get_personal_from_server() 
 
         self.material_popup = MaterialSelectionPopup(
             add_callback=self.add_material_with_quantity,
@@ -964,6 +1256,10 @@ class ReporteObraApp(App):
         )
         self.vehiculo_popup = VehiculoSelectionPopup(
             add_callback=self.add_vehiculo_with_placa_propiedad,
+            main_app=self
+        )
+        self.personal_popup = PersonalSelectionPopup(
+            add_callback=self.add_personal_with_horas_extras,
             main_app=self
         )
 
@@ -1016,6 +1312,26 @@ class ReporteObraApp(App):
         except requests.exceptions.RequestException as e:
             print(f"Error al obtener vehículos del servidor: {e}")
             self.vehiculos_df = pd.DataFrame(columns=['index', 'nombre_vehiculo', 'placa', 'propiedad'])
+
+    def get_personal_from_server(self):
+        try:
+            response = requests.get(f"{API_URL}/api/personal", timeout=10)
+            response.raise_for_status()
+            personal_data = response.json()
+            # Concatenar "AP. PATERNO AP. MATERNO, NOMBRES" y guardarlo en una nueva columna 'NOMBRE_COMPLETO'
+            self.personal_df = pd.DataFrame(personal_data)
+            if not self.personal_df.empty:
+                self.personal_df['NOMBRE_COMPLETO'] = self.personal_df['AP. PATERNO'] + ' ' + self.personal_df['AP.  MATERNO'].fillna('') + ', ' + self.personal_df['NOMBRES']
+            print("Personal de campo cargado exitosamente.")
+        except requests.exceptions.ConnectionError:
+            print(f"Error: No se pudo conectar al servidor.")
+            self.personal_df = pd.DataFrame(columns=['NOMBRE_COMPLETO', 'CATEGORIA'])
+        except requests.exceptions.Timeout:
+            print(f"Error: Tiempo de espera agotado al conectar al servidor.")
+            self.personal_df = pd.DataFrame(columns=['NOMBRE_COMPLETO', 'CATEGORIA'])
+        except requests.exceptions.RequestException as e:
+            print(f"Error al obtener personal del servidor: {e}")
+            self.personal_df = pd.DataFrame(columns=['NOMBRE_COMPLETO', 'CATEGORIA'])
 
     def setup_material_input(self, form_layout):
         material_layout = BoxLayout(
@@ -1101,6 +1417,34 @@ class ReporteObraApp(App):
         vehiculo_layout.add_widget(self.selected_vehiculos_layout)
         form_layout.add_widget(vehiculo_layout)
 
+    def setup_personal_input(self, form_layout):
+        personal_layout = BoxLayout(
+            orientation='vertical',
+            spacing=dp(5),
+            size_hint_y=None
+        )
+        personal_layout.bind(minimum_height=personal_layout.setter("height"))
+
+        open_popup_button = create_button(
+            'Seleccionar Personal',
+            size=(400, 50),
+            color=BTN_COLOR,
+            on_press=self.show_personal_popup
+        )
+        personal_layout.add_widget(open_popup_button)
+
+        self.selected_personal_layout = BoxLayout(
+            orientation='vertical',
+            spacing=dp(5),
+            size_hint_y=None
+        )
+        self.selected_personal_layout.bind(
+            minimum_height=self.selected_personal_layout.setter("height")
+        )
+
+        personal_layout.add_widget(self.selected_personal_layout)
+        form_layout.add_widget(personal_layout)
+
     def show_material_popup(self, instance):
         self.material_popup.open()
 
@@ -1109,6 +1453,9 @@ class ReporteObraApp(App):
 
     def show_vehiculo_popup(self, instance):
         self.vehiculo_popup.open()
+
+    def show_personal_popup(self, instance):
+        self.personal_popup.open()
 
     def add_material_with_quantity(self, material_name, unit, quantity):
         try:
@@ -1194,6 +1541,32 @@ class ReporteObraApp(App):
         self.selected_vehiculos_layout.add_widget(vehiculo_layout)
         self.vehiculo_popup.update_selected_vehiculos_display()
 
+    def add_personal_with_horas_extras(self, nombre_completo, categoria, horas_extras):
+        personal_entry = PersonalEntry(nombre_completo, categoria, horas_extras)
+        self.personal_seleccionados.append(personal_entry)
+
+        personal_layout = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(40)
+        )
+        personal_label = Label(
+            text=f"{nombre_completo} - Cat: {categoria} - HE: {horas_extras}",
+            size_hint_x=0.8
+        )
+        remove_button = create_button(
+            'X',
+            size=(dp(40), dp(40)),
+            color=RED,
+            on_press=lambda btn: self.remove_personal(personal_entry, personal_layout)
+        )
+        remove_button.size_hint_x = 0.2
+
+        personal_layout.add_widget(personal_label)
+        personal_layout.add_widget(remove_button)
+        self.selected_personal_layout.add_widget(personal_layout)
+        self.personal_popup.update_selected_personal_display()
+
     def remove_material(self, material_entry, material_layout):
         self.materiales_seleccionados.remove(material_entry)
         self.selected_materials_layout.remove_widget(material_layout)
@@ -1209,6 +1582,11 @@ class ReporteObraApp(App):
         self.selected_vehiculos_layout.remove_widget(vehiculo_layout)
         self.vehiculo_popup.update_selected_vehiculos_display()
 
+    def remove_personal(self, personal_entry, personal_layout):
+        self.personal_seleccionados.remove(personal_entry)
+        self.selected_personal_layout.remove_widget(personal_layout)
+        self.personal_popup.update_selected_personal_display()
+
     def confirmar_envio(self, instance):
         if not self.validar_datos():
             return
@@ -1221,6 +1599,8 @@ class ReporteObraApp(App):
                 if campo["nombre"] == "equipos_usados"
                 else [vehiculo.to_dict() for vehiculo in self.vehiculos_seleccionados]
                 if campo["nombre"] == "vehiculos_usados"
+                else [personal.to_dict() for personal in self.personal_seleccionados]
+                if campo["nombre"] == "personal_de_campo"
                 else (self.respuestas[campo["nombre"]].text == "Sí"
                       if campo["tipo"] == "bool"
                       else (float(self.respuestas[campo["nombre"]].text)
@@ -1237,9 +1617,11 @@ class ReporteObraApp(App):
                 self.materiales_seleccionados = []
                 self.equipos_seleccionados = []
                 self.vehiculos_seleccionados = []
+                self.personal_seleccionados = [] # Limpiar lista personal
                 self.selected_materials_layout.clear_widgets()
                 self.selected_equipos_layout.clear_widgets()
                 self.selected_vehiculos_layout.clear_widgets()
+                self.selected_personal_layout.clear_widgets() # Limpiar layout personal
             else:
                 print(f"Error al enviar datos: {response.status_code} - {response.text}")
         except requests.exceptions.ConnectionError:
@@ -1262,6 +1644,10 @@ class ReporteObraApp(App):
             elif campo["nombre"] == "vehiculos_usados":
                 if not self.vehiculos_seleccionados:
                     print("Debe seleccionar al menos un vehículo.")
+                    return False
+            elif campo["nombre"] == "personal_de_campo":
+                if not self.personal_seleccionados:
+                    print("Debe seleccionar al menos un personal de campo.")
                     return False
             else:
                 valor = self.respuestas[campo["nombre"]].text
