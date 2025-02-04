@@ -1,4 +1,3 @@
-# sya_operaciones_server.py
 from flask import Flask, request, jsonify, send_file
 import openpyxl
 from datetime import datetime
