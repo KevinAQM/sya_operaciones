@@ -1,4 +1,3 @@
-# sya_operaciones_server.py
 import os
 import logging
 from datetime import datetime
