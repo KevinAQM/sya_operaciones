@@ -1,3 +1,5 @@
+import requests
+from datetime import datetime
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
@@ -12,8 +14,6 @@ from kivy.uix.popup import Popup
 from kivy.uix.gridlayout import GridLayout
 from kivy.metrics import dp
 from kivy.core.window import Window
-from datetime import datetime
-import requests
 from kivy.animation import Animation
 from kivy.graphics import Color, Rectangle
 
@@ -125,6 +125,7 @@ class MaterialSelectionPopup(Popup):
         self.size_hint = (0.9, 0.9)
         self.add_callback = add_callback
         self.main_app = main_app
+        self.is_new_material = False # Flag to track if a new material is being added
 
         layout = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(10))
 
@@ -219,6 +220,7 @@ class MaterialSelectionPopup(Popup):
         self.material_name.text = f"Material: {material_name}"
         self.unit_input.readonly = False
         self.unit_input.text = ""
+        self.is_new_material = False # Reset flag when selecting existing material
         for material in self.main_app.materiales_data:
             if material['nombre_material'] == material_name:
                 unit = material['unidad']
@@ -231,6 +233,7 @@ class MaterialSelectionPopup(Popup):
         self.material_name.text = f"Material: {material_name}"
         self.unit_input.readonly = False
         self.unit_input.text = ""
+        self.is_new_material = True # Set flag when adding new material
         self.materials_list.clear_widgets()
         self.search_input.text = material_name
 
@@ -244,11 +247,12 @@ class MaterialSelectionPopup(Popup):
 
         try:
             quantity = float(quantity)
-            self.add_callback(material_name, unit, quantity)
+            self.add_callback(material_name, unit, quantity, self.is_new_material) # Pass is_new_material flag
             self.search_input.text = ''
             self.unit_input.text = ''
             self.quantity_input.text = ''
             self.material_name.text = 'Material: '
+            self.is_new_material = False # Reset flag after adding
             self.update_selected_materials_display()
         except ValueError:
             print("Por favor ingrese una cantidad válida")
@@ -331,6 +335,7 @@ class EquipoSelectionPopup(Popup):
         self.size_hint = (0.9, 0.9)
         self.add_callback = add_callback
         self.main_app = main_app
+        self.is_new_equipo = False
 
         layout = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(10))
 
@@ -415,6 +420,7 @@ class EquipoSelectionPopup(Popup):
         self.equipo_name.text = f"Equipo: {equipo_name}"
         self.propiedad_input.readonly = False
         self.propiedad_input.text = ""
+        self.is_new_equipo = False
         for equipo in self.main_app.equipos_data:
             if equipo['nombre_equipo'] == equipo_name:
                 propiedad = equipo['propiedad']
@@ -427,6 +433,7 @@ class EquipoSelectionPopup(Popup):
         self.equipo_name.text = f"Equipo: {equipo_name}"
         self.propiedad_input.readonly = False
         self.propiedad_input.text = ""
+        self.is_new_equipo = True
         self.equipos_list.clear_widgets()
         self.search_input.text = equipo_name
 
@@ -440,11 +447,12 @@ class EquipoSelectionPopup(Popup):
 
         try:
             cantidad = float(cantidad)
-            self.add_callback(equipo_name, cantidad, propiedad)
+            self.add_callback(equipo_name, cantidad, propiedad, self.is_new_equipo)
             self.search_input.text = ''
             self.propiedad_input.text = ''
             self.quantity_input.text = ''
             self.equipo_name.text = 'Equipo: '
+            self.is_new_equipo = False
             self.update_selected_equipos_display()
         except ValueError:
             print("Por favor ingrese una cantidad válida")
@@ -527,6 +535,7 @@ class VehiculoSelectionPopup(Popup):
         self.size_hint = (0.9, 0.9)
         self.add_callback = add_callback
         self.main_app = main_app
+        self.is_new_vehiculo = False
 
         layout = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(10))
 
@@ -613,6 +622,7 @@ class VehiculoSelectionPopup(Popup):
         self.propiedad_input.readonly = False
         self.placa_input.text = ""
         self.propiedad_input.text = ""
+        self.is_new_vehiculo = False
         for vehiculo in self.main_app.vehiculos_data:
             if vehiculo['nombre_vehiculo'] == vehiculo_name:
                 placa = vehiculo['placa']
@@ -629,6 +639,7 @@ class VehiculoSelectionPopup(Popup):
         self.propiedad_input.readonly = False
         self.placa_input.text = ""
         self.propiedad_input.text = ""
+        self.is_new_vehiculo = True
         self.vehiculos_list.clear_widgets()
         self.search_input.text = vehiculo_name
 
@@ -640,11 +651,12 @@ class VehiculoSelectionPopup(Popup):
         if not all([vehiculo_name, placa, propiedad]):
             return
 
-        self.add_callback(vehiculo_name, placa, propiedad)
+        self.add_callback(vehiculo_name, placa, propiedad, self.is_new_vehiculo)
         self.search_input.text = ''
         self.placa_input.text = ''
         self.propiedad_input.text = ''
         self.vehiculo_name.text = 'Vehículo: '
+        self.is_new_vehiculo = False
         self.update_selected_vehiculos_display()
 
     def update_selected_vehiculos_display(self):
@@ -725,6 +737,7 @@ class PersonalSelectionPopup(Popup):
         self.size_hint = (0.9, 0.9)
         self.add_callback = add_callback
         self.main_app = main_app
+        self.is_new_personal = False
 
         layout = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(10))
 
@@ -810,6 +823,7 @@ class PersonalSelectionPopup(Popup):
         self.categoria_input.readonly = False
         self.categoria_input.text = ""
         self.selected_categoria = None
+        self.is_new_personal = False
         for personal in self.main_app.personal_data:
             if personal['NOMBRE_COMPLETO'] == personal_name:
                 categoria_personal = personal['CATEGORIA']
@@ -824,6 +838,7 @@ class PersonalSelectionPopup(Popup):
         self.categoria_input.readonly = False
         self.categoria_input.text = ""
         self.selected_categoria = None
+        self.is_new_personal = True
         self.personal_list.clear_widgets()
         self.search_input.text = personal_name
 
@@ -841,12 +856,13 @@ class PersonalSelectionPopup(Popup):
         try:
             horas_extras = float(horas_extras)
             categoria = categoria_ingresada if categoria_ingresada else "N/A"
-            self.add_callback(personal_name, categoria, horas_extras)
+            self.add_callback(personal_name, categoria, horas_extras, self.is_new_personal)
             self.search_input.text = ''
             self.horas_extras_input.text = ''
             self.categoria_input.text = ''
             self.personal_name.text = 'Personal: '
             self.selected_categoria = None
+            self.is_new_personal = False
             self.update_selected_personal_display()
         except ValueError:
             print("Por favor ingrese horas extras válidas")
@@ -949,6 +965,11 @@ class ReporteObraApp(App):
         self.equipos_data = []
         self.vehiculos_data = []
         self.personal_data = []
+        self.new_materials_to_add = [] # List to hold new materials to be added to CSV
+        self.new_equipos_to_add = [] # List to hold new equipos to be added to CSV
+        self.new_vehiculos_to_add = [] # List to hold new vehiculos to be added to CSV
+        self.new_personal_to_add = [] # List to hold new personal to be added to CSV
+
 
         self.campos = [
             {"nombre": "fecha", "tipo": "date", "etiqueta": "Fecha"},
@@ -1141,7 +1162,7 @@ class ReporteObraApp(App):
             self.personal_button.background_color = GREEN
         self.personal_popup.open()
 
-    def add_material_with_quantity(self, material_name, unit, quantity):
+    def add_material_with_quantity(self, material_name, unit, quantity, is_new_material=False):
         try:
             float(quantity)
         except ValueError:
@@ -1150,24 +1171,32 @@ class ReporteObraApp(App):
 
         material_entry = MaterialEntry(material_name, unit, float(quantity))
         self.materiales_seleccionados.append(material_entry)
+        if is_new_material:
+            self.new_materials_to_add.append({'nombre_material': material_name, 'unidad': unit}) # Add to new items list
         self.material_popup.update_selected_materials_display()
         self.materiales_button.background_color = BTN_COLOR
 
-    def add_equipo_with_quantity(self, equipo_name, cantidad, propiedad):
+    def add_equipo_with_quantity(self, equipo_name, cantidad, propiedad, is_new_equipo=False):
         equipo_entry = EquipoEntry(equipo_name, cantidad, propiedad)
         self.equipos_seleccionados.append(equipo_entry)
+        if is_new_equipo:
+            self.new_equipos_to_add.append({'nombre_equipo': equipo_name, 'propiedad': propiedad})
         self.equipo_popup.update_selected_equipos_display()
         self.equipos_button.background_color = BTN_COLOR
 
-    def add_vehiculo_with_placa_propiedad(self, vehiculo_name, placa, propiedad):
+    def add_vehiculo_with_placa_propiedad(self, vehiculo_name, placa, propiedad, is_new_vehiculo=False):
         vehiculo_entry = VehiculoEntry(vehiculo_name, placa, propiedad)
         self.vehiculos_seleccionados.append(vehiculo_entry)
+        if is_new_vehiculo:
+            self.new_vehiculos_to_add.append({'nombre_vehiculo': vehiculo_name, 'placa': placa, 'propiedad': propiedad})
         self.vehiculo_popup.update_selected_vehiculos_display()
         self.vehiculos_button.background_color = BTN_COLOR
 
-    def add_personal_with_horas_extras(self, nombre_completo, categoria, horas_extras):
+    def add_personal_with_horas_extras(self, nombre_completo, categoria, horas_extras, is_new_personal=False):
         personal_entry = PersonalEntry(nombre_completo, categoria, horas_extras)
         self.personal_seleccionados.append(personal_entry)
+        if is_new_personal:
+            self.new_personal_to_add.append({'nombre_completo': nombre_completo, 'categoria': categoria})
         self.personal_popup.update_selected_personal_display()
         self.personal_button.background_color = BTN_COLOR
 
@@ -1220,6 +1249,41 @@ class ReporteObraApp(App):
         if not self.validar_datos():
             return
 
+        # Add new items to CSVs first
+        new_items_added_successfully = True
+        for material_data in self.new_materials_to_add:
+            response = requests.post(f"{API_URL}/api/materiales/new", json=material_data, timeout=10)
+            if response.status_code != 201:
+                print(f"Error adding new material: {response.status_code} - {response.text}")
+                new_items_added_successfully = False
+                break
+        if not new_items_added_successfully: return False
+
+        for equipo_data in self.new_equipos_to_add:
+            response = requests.post(f"{API_URL}/api/equipos/new", json=equipo_data, timeout=10)
+            if response.status_code != 201:
+                print(f"Error adding new equipo: {response.status_code} - {response.text}")
+                new_items_added_successfully = False
+                break
+        if not new_items_added_successfully: return False
+
+        for vehiculo_data in self.new_vehiculos_to_add:
+            response = requests.post(f"{API_URL}/api/vehiculos/new", json=vehiculo_data, timeout=10)
+            if response.status_code != 201:
+                print(f"Error adding new vehiculo: {response.status_code} - {response.text}")
+                new_items_added_successfully = False
+                break
+        if not new_items_added_successfully: return False
+
+        for personal_data in self.new_personal_to_add:
+            response = requests.post(f"{API_URL}/api/personal/new", json=personal_data, timeout=10)
+            if response.status_code != 201:
+                print(f"Error adding new personal: {response.status_code} - {response.text}")
+                new_items_added_successfully = False
+                break
+        if not new_items_added_successfully: return False
+
+
         datos = {
             campo["nombre"]: (
                 [material.to_dict() for material in self.materiales_seleccionados] if campo["nombre"] == "materiales_usados" else
@@ -1240,6 +1304,10 @@ class ReporteObraApp(App):
                 self.equipos_seleccionados = []
                 self.vehiculos_seleccionados = []
                 self.personal_seleccionados = []
+                self.new_materials_to_add = [] # Clear new materials list
+                self.new_equipos_to_add = [] # Clear new equipos list
+                self.new_vehiculos_to_add = [] # Clear new vehiculos list
+                self.new_personal_to_add = [] # Clear new personal list
                 self.show_success_popup()
             else:
                 print(f"Error al enviar datos: {response.status_code} - {response.text}")

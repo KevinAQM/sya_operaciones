@@ -1,9 +1,10 @@
-from flask import Flask, request, jsonify, send_file
-import openpyxl
-from datetime import datetime
+# sya_operaciones_server.py
 import os
 import logging
+from datetime import datetime
 import pandas as pd
+import openpyxl
+from flask import Flask, request, jsonify, send_file
 
 app = Flask(__name__)
 
@@ -248,6 +249,60 @@ def descargar_excel_flask():
         logging.error(f"Error al generar descarga de Excel: {str(e)}")
         return str(e), 500
 
+def agregar_nuevo_material_csv(nombre_material, unidad):
+    try:
+        df = pd.read_csv(MATERIALES_CSV_PATH)
+        nuevo_material = pd.DataFrame([{'nombre_material': nombre_material, 'unidad': unidad}])
+        df = pd.concat([df, nuevo_material], ignore_index=True)
+        df.to_csv(MATERIALES_CSV_PATH, index=False)
+        logging.info(f"Nuevo material '{nombre_material}' agregado a {MATERIALES_CSV_PATH}")
+        return True
+    except Exception as e:
+        logging.error(f"Error al agregar nuevo material a CSV: {str(e)}")
+        return False
+
+def agregar_nuevo_equipo_csv(nombre_equipo, propiedad):
+    try:
+        df = pd.read_csv(EQUIPOS_CSV_PATH)
+        nuevo_equipo = pd.DataFrame([{'nombre_equipo': nombre_equipo, 'propiedad': propiedad}])
+        df = pd.concat([df, nuevo_equipo], ignore_index=True)
+        df.to_csv(EQUIPOS_CSV_PATH, index=False)
+        logging.info(f"Nuevo equipo '{nombre_equipo}' agregado a {EQUIPOS_CSV_PATH}")
+        return True
+    except Exception as e:
+        logging.error(f"Error al agregar nuevo equipo a CSV: {str(e)}")
+        return False
+
+def agregar_nuevo_vehiculo_csv(nombre_vehiculo, placa, propiedad):
+    try:
+        df = pd.read_csv(VEHICULOS_CSV_PATH)
+        nuevo_vehiculo = pd.DataFrame([{'nombre_vehiculo': nombre_vehiculo, 'placa': placa, 'propiedad': propiedad}])
+        df = pd.concat([df, nuevo_vehiculo], ignore_index=True)
+        df.to_csv(VEHICULOS_CSV_PATH, index=False)
+        logging.info(f"Nuevo vehículo '{nombre_vehiculo}' agregado a {VEHICULOS_CSV_PATH}")
+        return True
+    except Exception as e:
+        logging.error(f"Error al agregar nuevo vehículo a CSV: {str(e)}")
+        return False
+
+def agregar_nuevo_personal_csv(apellido_paterno, apellido_materno, nombres, categoria):
+    try:
+        df = pd.read_csv(PERSONAL_CSV_PATH)
+        nuevo_personal = pd.DataFrame([{
+            'AP. PATERNO': apellido_paterno,
+            'AP. MATERNO': apellido_materno,
+            'NOMBRES': nombres,
+            'CATEGORIA': categoria
+        }])
+        df = pd.concat([df, nuevo_personal], ignore_index=True)
+        df.to_csv(PERSONAL_CSV_PATH, index=False)
+        logging.info(f"Nuevo personal '{nombres} {apellido_paterno}' agregado a {PERSONAL_CSV_PATH}")
+        return True
+    except Exception as e:
+        logging.error(f"Error al agregar nuevo personal a CSV: {str(e)}")
+        return False
+
+
 # Inicializar Excel al inicio
 inicializar_excel()
 
@@ -294,6 +349,60 @@ def get_personal():
         return jsonify({"error": f"No se encontró el archivo de personal en {PERSONAL_CSV_PATH}"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/materiales/new', methods=['POST'])
+def new_material():
+    data = request.json
+    if not data or 'nombre_material' not in data or 'unidad' not in data:
+        return jsonify({"error": "Nombre de material y unidad son requeridos"}), 400
+    if agregar_nuevo_material_csv(data['nombre_material'], data['unidad']):
+        return jsonify({"status": "success"}), 201
+    else:
+        return jsonify({"error": "Error al agregar nuevo material"}), 500
+
+@app.route('/api/equipos/new', methods=['POST'])
+def new_equipo():
+    data = request.json
+    if not data or 'nombre_equipo' not in data or 'propiedad' not in data:
+        return jsonify({"error": "Nombre de equipo y propiedad son requeridos"}), 400
+    if agregar_nuevo_equipo_csv(data['nombre_equipo'], data['propiedad']):
+        return jsonify({"status": "success"}), 201
+    else:
+        return jsonify({"error": "Error al agregar nuevo equipo"}), 500
+
+@app.route('/api/vehiculos/new', methods=['POST'])
+def new_vehiculo():
+    data = request.json
+    if not data or 'nombre_vehiculo' not in data or 'placa' not in data or 'propiedad' not in data:
+        return jsonify({"error": "Nombre de vehículo, placa y propiedad son requeridos"}), 400
+    if agregar_nuevo_vehiculo_csv(data['nombre_vehiculo'], data['placa'], data['propiedad']):
+        return jsonify({"status": "success"}), 201
+    else:
+        return jsonify({"error": "Error al agregar nuevo vehículo"}), 500
+
+@app.route('/api/personal/new', methods=['POST'])
+def new_personal():
+    data = request.json
+    if not data or 'nombre_completo' not in data or 'categoria' not in data:
+        return jsonify({"error": "Nombre completo y categoría de personal son requeridos"}), 400
+
+    nombre_completo = data['nombre_completo']
+    partes_nombre = nombre_completo.split(',')
+    if len(partes_nombre) != 2:
+        return jsonify({"error": "Formato de nombre incorrecto. Debe ser 'apellido_paterno apellido_materno, nombres'"}), 400
+
+    apellidos_str, nombres = partes_nombre
+    apellidos_partes = apellidos_str.strip().split()
+    if not apellidos_partes:
+        return jsonify({"error": "Apellido paterno requerido"}), 400
+    apellido_paterno = apellidos_partes[0]
+    apellido_materno = apellidos_partes[1] if len(apellidos_partes) > 1 else ''
+
+    if agregar_nuevo_personal_csv(apellido_paterno, apellido_materno, nombres.strip(), data['categoria']):
+        return jsonify({"status": "success"}), 201
+    else:
+        return jsonify({"error": "Error al agregar nuevo personal"}), 500
+
 
 @app.route('/recibir-datos', methods=['POST'])
 def recibir_datos():
