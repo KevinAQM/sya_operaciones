@@ -10,6 +10,7 @@ app = Flask(__name__)
 # Usar una ruta absoluta para el archivo Excel
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 EXCEL_FILE = os.path.join(BASE_DIR, "registros_trabajo.xlsx")
+REQUERIMIENTOS_EXCEL_FILE = os.path.join(BASE_DIR, "requerimientos_obra.xlsx") # Nuevo archivo para requerimientos
 MATERIALES_CSV_PATH = os.path.join(BASE_DIR, "operaciones_materiales.csv")
 EQUIPOS_CSV_PATH = os.path.join(BASE_DIR, "operaciones_equipos.csv")
 VEHICULOS_CSV_PATH = os.path.join(BASE_DIR, "operaciones_vehiculos.csv")
@@ -20,8 +21,9 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 def inicializar_excel():
+    # Inicializar Excel de Reporte Diario
     if not os.path.exists(EXCEL_FILE):
-        logging.info(f"Creando archivo Excel en: {EXCEL_FILE}")
+        logging.info(f"Creando archivo Excel de reporte diario en: {EXCEL_FILE}")
         wb = openpyxl.Workbook()
         # Hoja "Reporte Principal"
         ws1 = wb.active
@@ -64,10 +66,25 @@ def inicializar_excel():
 
         wb.save(EXCEL_FILE)
     else:
-        logging.info(f"El archivo Excel ya existe en: {EXCEL_FILE}")
+        logging.info(f"El archivo Excel de reporte diario ya existe en: {EXCEL_FILE}")
+
+    # Inicializar Excel de Requerimientos
+    if not os.path.exists(REQUERIMIENTOS_EXCEL_FILE):
+        logging.info(f"Creando archivo Excel de requerimientos en: {REQUERIMIENTOS_EXCEL_FILE}")
+        wb_req = openpyxl.Workbook()
+        ws_req = wb_req.active
+        ws_req.title = "Requerimientos"
+        headers_requerimientos_inicial = [
+            "Fecha", "Código Obra", "Nombre Ingeniero"
+        ]
+        ws_req.append(headers_requerimientos_inicial)
+        wb_req.save(REQUERIMIENTOS_EXCEL_FILE)
+    else:
+        logging.info(f"El archivo Excel de requerimientos ya existe en: {REQUERIMIENTOS_EXCEL_FILE}")
+
 
 def actualizar_cabeceras_materiales(ws, num_materiales):
-    headers = ws[1]
+    headers = list(ws.rows)[0] # Correct way to get headers in openpyxl
     num_headers_actuales = len(headers)
 
     ultimo_material = 0
@@ -90,7 +107,7 @@ def actualizar_cabeceras_materiales(ws, num_materiales):
         num_headers_actuales += 3
 
 def actualizar_cabeceras_equipos(ws, num_equipos):
-    headers = ws[1]
+    headers = list(ws.rows)[0] # Correct way to get headers in openpyxl
     num_headers_actuales = len(headers)
 
     ultimo_equipo = 0
@@ -113,7 +130,7 @@ def actualizar_cabeceras_equipos(ws, num_equipos):
         num_headers_actuales += 3
 
 def actualizar_cabeceras_vehiculos(ws, num_vehiculos):
-    headers = ws[1]
+    headers = list(ws.rows)[0] # Correct way to get headers in openpyxl
     num_headers_actuales = len(headers)
 
     ultimo_vehiculo = 0
@@ -136,7 +153,7 @@ def actualizar_cabeceras_vehiculos(ws, num_vehiculos):
         num_headers_actuales += 3
 
 def actualizar_cabeceras_personal(ws, num_personal):
-    headers = ws[1]
+    headers = list(ws.rows)[0] # Correct way to get headers in openpyxl
     num_headers_actuales = len(headers)
 
     ultimo_personal = 0
@@ -156,6 +173,29 @@ def actualizar_cabeceras_personal(ws, num_personal):
         ws.cell(row=1, column=num_headers_actuales + 1, value=f"Personal {i}")
         ws.cell(row=1, column=num_headers_actuales + 2, value=f"Categoría {i}")
         ws.cell(row=1, column=num_headers_actuales + 3, value=f"Horas extras {i}")
+        num_headers_actuales += 3
+
+def actualizar_cabeceras_requerimientos(ws, num_items):
+    headers = list(ws.rows)[0] # Correct way to get headers in openpyxl
+    num_headers_actuales = len(headers)
+
+    ultimo_item = 0
+    for header in headers:
+        header_value = header.value
+        if header_value and header_value.startswith("Artículo"):
+            try:
+                numero = int(header_value.split(" ")[1])
+                ultimo_item = max(ultimo_item, numero)
+            except ValueError:
+                pass
+
+    if ultimo_item >= num_items:
+        return
+
+    for i in range(ultimo_item + 1, num_items + 1):
+        ws.cell(row=1, column=num_headers_actuales + 1, value=f"Artículo {i}")
+        ws.cell(row=1, column=num_headers_actuales + 2, value=f"Unidad {i}")
+        ws.cell(row=1, column=num_headers_actuales + 3, value=f"Cantidad {i}")
         num_headers_actuales += 3
 
 
@@ -240,6 +280,32 @@ def procesar_datos(datos):
     except Exception as e:
         logging.error(f"Error al procesar datos: {str(e)}")
 
+def procesar_requerimientos(datos):
+    logging.info("Datos de requerimientos recibidos:")
+    logging.info(datos)  # Log the received data for debugging
+    try:
+        wb_req = openpyxl.load_workbook(REQUERIMIENTOS_EXCEL_FILE)
+        ws_requerimientos = wb_req["Requerimientos"]
+
+        requerimientos = datos.get('requerimientos', [])
+        actualizar_cabeceras_requerimientos(ws_requerimientos, len(requerimientos))
+
+        fila_requerimientos = [
+            datetime.strptime(datos.get('fecha', ''), '%d/%m/%Y').date(), # Fecha actual si no viene
+            datos.get('codigo_obra', ''),
+            datos.get('nombre_ingeniero', '')
+        ]
+        for req in requerimientos:
+            fila_requerimientos.extend([req['nombre'], req['unidad'], req['cantidad']])
+        ws_requerimientos.append(fila_requerimientos)
+
+        wb_req.save(REQUERIMIENTOS_EXCEL_FILE)
+        logging.info(f"Requerimientos recibidos de {datos.get('nombre_ingeniero', 'Unknown')} procesados exitosamente")
+
+    except Exception as e:
+        logging.exception(f"Error al procesar requerimientos: {str(e)}") # Log exception details
+
+
 def descargar_excel_flask():
     try:
         logging.info(f"Intentando enviar archivo: {EXCEL_FILE}")
@@ -247,6 +313,15 @@ def descargar_excel_flask():
     except Exception as e:
         logging.error(f"Error al generar descarga de Excel: {str(e)}")
         return str(e), 500
+
+def descargar_requerimientos_excel_flask():
+    try:
+        logging.info(f"Intentando enviar archivo de requerimientos: {REQUERIMIENTOS_EXCEL_FILE}")
+        return send_file(REQUERIMIENTOS_EXCEL_FILE, as_attachment=True, download_name='requerimientos_obra.xlsx')
+    except Exception as e:
+        logging.error(f"Error al generar descarga de Excel de requerimientos: {str(e)}")
+        return str(e), 500
+
 
 def agregar_nuevo_material_csv(nombre_material, unidad):
     try:
@@ -409,9 +484,21 @@ def recibir_datos():
     procesar_datos(datos)
     return jsonify({"status": "success"})
 
+@app.route('/recibir-requerimientos', methods=['POST'])
+def recibir_requerimientos_route(): # Corrected route name
+    datos = request.json
+    print("Datos recibidos en /recibir-requerimientos:", datos) # Log received data
+    procesar_requerimientos(datos)
+    return jsonify({"status": "success"})
+
 @app.route('/descargar-excel', methods=['GET'])
 def descargar_excel_route():
     return descargar_excel_flask()
+
+@app.route('/descargar-requerimientos-excel', methods=['GET'])
+def descargar_requerimientos_excel_route():
+    return descargar_requerimientos_excel_flask()
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

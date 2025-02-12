@@ -1,23 +1,23 @@
-﻿item,nombre_equipo,propiedad
-1,Generador eléctrico de 20Kw,propio
-2,Amortiguador de impacto,propio
-3,Camión remolcador- amortiguador,propio
-4,Generador eléctrico de 7Kw,propio
-5,"Andamio multidirecional, certificado",propio
-6,Reflectores LED,propio
-7,Conos de señalización,propio
-8,Panel de señalización vert. 0.9x0.90,propio
-9,Flecha luminosa a bateria y soporte,propio
-10,Rotomartillos Demoledores,propio
-11,Taladro Percutor,propio
-12,"Amoladoras de 9"", 4 1/2"" o 7""",propio
-13,Taladro Inalambrico,propio
-14,Equipo de Soldar,propio
-15,Vibradora de Concreto,propio
-16,Trompito Mezclador,propio
-17,Retroexcavadora,propio
-18,Minicargador,propio
-19,Cortadora de Pavimento,propio
-20,Vibroapisonador,propio
-21,Plancha compactadora,propio
-22,Rodillo Bermero (chupetero),propio
+﻿item,nombre_equipo,propiedad,unidad
+1,Generador eléctrico de 20Kw,propio,und
+2,Amortiguador de impacto,propio,und
+3,Camión remolcador- amortiguador,propio,und
+4,Generador eléctrico de 7Kw,propio,und
+5,"Andamio multidirecional, certificado",propio,und
+6,Reflectores LED,propio,und
+7,Conos de señalización,propio,und
+8,Panel de señalización vert. 0.9x0.90,propio,und
+9,Flecha luminosa a bateria y soporte,propio,und
+10,Rotomartillos Demoledores,propio,und
+11,Taladro Percutor,propio,und
+12,"Amoladoras de 9"", 4 1/2"" o 7""",propio,und
+13,Taladro Inalambrico,propio,und
+14,Equipo de Soldar,propio,und
+15,Vibradora de Concreto,propio,und
+16,Trompito Mezclador,propio,und
+17,Retroexcavadora,propio,und
+18,Minicargador,propio,und
+19,Cortadora de Pavimento,propio,und
+20,Vibroapisonador,propio,und
+21,Plancha compactadora,propio,und
+22,Rodillo Bermero (chupetero),propio,und
