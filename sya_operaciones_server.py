@@ -29,7 +29,7 @@ def inicializar_excel():
         headers_reporte = [
             "Fecha", "Código Obra", "Nombre Ingeniero",
             "Nombre Supervisor", "Actividad Principal",
-            "Supervisor Presente", "Equipos Seguridad Completos",
+            "Supervisor Presente", "Avance Diario",
             "Incidentes", "Plan Siguiente Día", "Observaciones"
         ]
         ws1.append(headers_reporte)
@@ -178,7 +178,7 @@ def procesar_datos(datos):
             datos.get('nombre_supervisor', ''),
             datos.get('actividad_principal', ''),
             'Sí' if datos.get('supervisor_presente', False) else 'No',
-            'Sí' if datos.get('equipos_seguridad', False) else 'No',
+            datos.get('avance_diario', ''),
             datos.get('incidentes', ''),
             datos.get('siguiente_dia', ''),
             datos.get('observaciones', '')
