@@ -19,11 +19,11 @@ from kivy.core.window import Window
 from kivy.animation import Animation
 from kivy.graphics import Color, Rectangle
 
-API_URL = "http://34.67.103.132:5000" # "http://127.0.0.1:5000" #
+API_URL = "http://34.67.103.132:5000"  # "http://127.0.0.1:5000" #
 BG_COLOR = (0.1, 0.1, 0.1, 1)
 BTN_COLOR = (0, 0.5, 1, 1)
 WHITE = (1, 1, 1, 1)
-GRAY = (0.75, 0.75, 1, 1) # Modified to ensure visibility
+GRAY = (0.75, 0.75, 1, 1)  # Modified to ensure visibility
 BLACK = (0, 0, 0, 1)
 GREEN = (0, 0.7, 0, 1)
 RED = (1, 0, 0, 1)
@@ -43,6 +43,7 @@ text_input_font_size = int(120 * scale_factor)
 
 Window.clearcolor = BG_COLOR
 
+
 def create_label(text, titulo=False):
     return Label(
         text=text,
@@ -53,7 +54,8 @@ def create_label(text, titulo=False):
         font_size=title_font_size if titulo else label_font_size
     )
 
-def create_text_input(multiline=False, text="", **kwargs): # Modified to accept **kwargs
+
+def create_text_input(multiline=False, text="", **kwargs):  # Modified to accept **kwargs
     return TextInput(
         text=text,
         multiline=multiline,
@@ -64,8 +66,9 @@ def create_text_input(multiline=False, text="", **kwargs): # Modified to accept 
         foreground_color=BLACK,
         font_size=text_input_font_size,
         padding=(dp(padding), dp(input_height * 0.5 - text_input_font_size * 0.25)),
-        **kwargs # Pass kwargs to TextInput constructor
+        **kwargs  # Pass kwargs to TextInput constructor
     )
+
 
 def create_button(text, size=(200, 40), color=BTN_COLOR, on_press=None):
     return Button(
@@ -79,29 +82,33 @@ def create_button(text, size=(200, 40), color=BTN_COLOR, on_press=None):
         font_size=label_font_size
     )
 
+
 class MainScreen(AnchorLayout):
     def __init__(self, main_app, **kwargs):
         super().__init__(**kwargs)
         self.main_app = main_app
         self.padding = dp(margin * 2)
         self.spacing = dp(margin * 2)
-        self.anchor_x = 'center' # Add horizontal centering
-        self.anchor_y = 'center' # Add vertical centering
+        self.anchor_x = 'center'  # Add horizontal centering
+        self.anchor_y = 'center'  # Add vertical centering
 
-        vertical_layout = BoxLayout(orientation='vertical', spacing=dp(margin * 2), padding=dp(margin), size_hint_y=None) # BoxLayout for vertical arrangement, size_hint_y=None
+        vertical_layout = BoxLayout(orientation='vertical', spacing=dp(margin * 2), padding=dp(margin),
+                                    size_hint_y=None)  # BoxLayout for vertical arrangement, size_hint_y=None
 
-        titulo_label = create_label('SELECCIONAR UNA OPCIÓN:', titulo=True) # Agregado el titulo
-        titulo_label.color = WHITE # Cambiar color a gris para que no resalte tanto
-        vertical_layout.add_widget(titulo_label) # Add titulo_label to vertical_layout
+        titulo_label = create_label('SELECCIONAR UNA OPCIÓN:', titulo=True)  # Agregado el titulo
+        titulo_label.color = WHITE  # Cambiar color a gris para que no resalte tanto
+        vertical_layout.add_widget(titulo_label)  # Add titulo_label to vertical_layout
 
         # No size_hint or size specified for buttons, BoxLayout will manage their size
-        reporte_button = create_button('REPORTE DIARIO DE OBRA', size=(600, button_height * 2), on_press=self.show_reporte_diario_screen)
-        requerimiento_button = create_button('REQUERIMIENTO DE MATERIALES', size=(600, button_height * 2), on_press=self.show_requerimiento_materiales_screen)
+        reporte_button = create_button('REPORTE DIARIO DE OBRA', size=(600, button_height * 2),
+                                       on_press=self.show_reporte_diario_screen)
+        requerimiento_button = create_button('REQUERIMIENTO DE MATERIALES', size=(600, button_height * 2),
+                                            on_press=self.show_requerimiento_materiales_screen)
 
         vertical_layout.add_widget(reporte_button)
         vertical_layout.add_widget(requerimiento_button)
 
-        self.add_widget(vertical_layout) # Add vertical_layout to AnchorLayout
+        self.add_widget(vertical_layout)  # Add vertical_layout to AnchorLayout
 
     def show_reporte_diario_screen(self, instance):
         self.main_app.show_reporte_diario_screen()
@@ -116,6 +123,7 @@ class CustomDropDown(DropDown):
         self.auto_width = False
         self.width = 400
 
+
 class MaterialEntry:
     def __init__(self, nombre, unidad, cantidad):
         self.nombre = nombre
@@ -125,7 +133,8 @@ class MaterialEntry:
     def to_dict(self):
         return {"nombre": self.nombre, "unidad": self.unidad, "cantidad": self.cantidad}
 
-class EquipoEntry: # Class for Reporte Diario Obra
+
+class EquipoEntry:  # Class for Reporte Diario Obra
     def __init__(self, nombre, cantidad, propiedad):
         self.nombre = nombre
         self.cantidad = cantidad
@@ -134,14 +143,17 @@ class EquipoEntry: # Class for Reporte Diario Obra
     def to_dict(self):
         return {"nombre": self.nombre, "cantidad": self.cantidad, "propiedad": self.propiedad}
 
-class RequerimientoEquipoEntry: # New class for Requerimiento Materiales
+
+class RequerimientoEquipoEntry:  # New class for Requerimiento Materiales
     def __init__(self, nombre, unidad, cantidad):
         self.nombre = nombre
-        self.unidad = unidad # In Requerimiento, 'propiedad' field from CSV is used as 'unidad' in UI
+        self.unidad = unidad  # In Requerimiento, 'propiedad' field from CSV is used as 'unidad' in UI
         self.cantidad = cantidad
 
     def to_dict(self):
-        return {"nombre": self.nombre, "unidad": self.unidad, "cantidad": self.cantidad} # Use "unidad" as key in dict
+        return {"nombre": self.nombre, "unidad": self.unidad,
+                "cantidad": self.cantidad}  # Use "unidad" as key in dict
+
 
 class VehiculoEntry:
     def __init__(self, nombre, placa, propiedad):
@@ -152,6 +164,7 @@ class VehiculoEntry:
     def to_dict(self):
         return {"nombre": self.nombre, "placa": self.placa, "propiedad": self.propiedad}
 
+
 class PersonalEntry:
     def __init__(self, nombre_completo, categoria, horas_extras):
         self.nombre_completo = nombre_completo
@@ -160,6 +173,7 @@ class PersonalEntry:
 
     def to_dict(self):
         return {"nombre_completo": self.nombre_completo, "categoria": self.categoria, "horas_extras": self.horas_extras}
+
 
 class MaterialSelectionPopup(Popup):
     def __init__(self, add_callback, main_app, **kwargs):
@@ -183,7 +197,7 @@ class MaterialSelectionPopup(Popup):
         )
         search_layout.add_widget(self.search_input)
 
-        scroll = ScrollView(size_hint_y=0.3) # 30% del espacio
+        scroll = ScrollView(size_hint_y=0.3)  # 30% del espacio
         self.materials_list = GridLayout(
             cols=1,
             spacing=dp(5),
@@ -193,7 +207,7 @@ class MaterialSelectionPopup(Popup):
         self.materials_list.bind(minimum_height=self.materials_list.setter('height'))
         scroll.add_widget(self.materials_list)
 
-        self.selected_materials_scroll = ScrollView(size_hint_y=0.4) # 40% del espacio
+        self.selected_materials_scroll = ScrollView(size_hint_y=0.4)  # 40% del espacio
         self.selected_materials_grid = GridLayout(
             cols=1,
             spacing=dp(5),
@@ -203,11 +217,13 @@ class MaterialSelectionPopup(Popup):
         self.selected_materials_grid.bind(minimum_height=self.selected_materials_grid.setter('height'))
         self.selected_materials_scroll.add_widget(self.selected_materials_grid)
 
-        selection_layout = GridLayout(cols=2, spacing=dp(10), size_hint_y=0.3, height=dp(120), padding=dp(10)) # 30% del espacio
+        selection_layout = GridLayout(cols=2, spacing=dp(10), size_hint_y=0.3, height=dp(120),
+                                      padding=dp(10))  # 30% del espacio
 
         self.material_name = Label(text="Material: ")
         self.unit_input = TextInput(hint_text='Unidad', multiline=False, size_hint_y=None, height=dp(40))
-        self.quantity_input = TextInput(hint_text='Cantidad', multiline=False, input_filter='float', size_hint_y=None, height=dp(40))
+        self.quantity_input = TextInput(hint_text='Cantidad', multiline=False, input_filter='float', size_hint_y=None,
+                                        height=dp(40))
 
         selection_layout.add_widget(Label(text="Unidad:"))
         selection_layout.add_widget(self.unit_input)
@@ -248,7 +264,8 @@ class MaterialSelectionPopup(Popup):
         if not value:
             return
 
-        filtered_materials = [m['nombre_material'] for m in self.main_app.materiales_data if value.lower() in m['nombre_material'].lower()]
+        filtered_materials = [m['nombre_material'] for m in self.main_app.materiales_data if
+                              value.lower() in m['nombre_material'].lower()]
 
         for material in filtered_materials:
             btn = Button(text=material, size_hint_y=None, height=dp(40), background_color=GRAY)
@@ -257,7 +274,8 @@ class MaterialSelectionPopup(Popup):
 
         unique_material_names = [m['nombre_material'] for m in self.main_app.materiales_data]
         if value and value not in filtered_materials and value not in unique_material_names:
-            new_btn = Button(text=f"Agregar nuevo material: {value}", size_hint_y=None, height=dp(40), background_color=GREEN)
+            new_btn = Button(text=f"Agregar nuevo material: {value}", size_hint_y=None, height=dp(40),
+                             background_color=GREEN)
             new_btn.bind(on_release=lambda btn: self.select_new_material(value))
             self.materials_list.add_widget(new_btn)
 
@@ -265,7 +283,7 @@ class MaterialSelectionPopup(Popup):
         self.material_name.text = f"Material: {material_name}"
         self.unit_input.readonly = False
         self.unit_input.text = ""
-        self.is_new_material = False # Reset flag when selecting existing material
+        self.is_new_material = False  # Reset flag when selecting existing material
         for material in self.main_app.materiales_data:
             if material['nombre_material'] == material_name:
                 unit = material['unidad']
@@ -278,7 +296,7 @@ class MaterialSelectionPopup(Popup):
         self.material_name.text = f"Material: {material_name}"
         self.unit_input.readonly = False
         self.unit_input.text = ""
-        self.is_new_material = True # Set flag when adding new material
+        self.is_new_material = True  # Set flag when adding new material
         self.materials_list.clear_widgets()
         self.search_input.text = material_name
 
@@ -292,12 +310,12 @@ class MaterialSelectionPopup(Popup):
 
         try:
             quantity = float(quantity)
-            self.add_callback(material_name, unit, quantity, self.is_new_material) # Pass is_new_material flag
+            self.add_callback(material_name, unit, quantity, self.is_new_material)  # Pass is_new_material flag
             self.search_input.text = ''
             self.unit_input.text = ''
             self.quantity_input.text = ''
             self.material_name.text = 'Material: '
-            self.is_new_material = False # Reset flag after adding
+            self.is_new_material = False  # Reset flag after adding
             self.update_selected_materials_display()
         except ValueError:
             print("Por favor ingrese una cantidad válida")
@@ -323,7 +341,7 @@ class MaterialSelectionPopup(Popup):
             text_layout = BoxLayout(
                 orientation='vertical',
                 size_hint_x=0.8,
-                padding=[0,0,0,0]
+                padding=[0, 0, 0, 0]
             )
 
             nombre_label = Label(
@@ -335,7 +353,7 @@ class MaterialSelectionPopup(Popup):
                 color=WHITE,
                 size_hint_y=0.5,
                 text_size=(None, None),
-                padding=[0,0]
+                padding=[0, 0]
             )
 
             detalles_label = Label(
@@ -346,7 +364,7 @@ class MaterialSelectionPopup(Popup):
                 color=WHITE,
                 size_hint_y=0.5,
                 text_size=(Window.width * 0.6, None),
-                padding=[0,0]
+                padding=[0, 0]
             )
 
             text_layout.add_widget(nombre_label)
@@ -373,7 +391,7 @@ class MaterialSelectionPopup(Popup):
         self.update_selected_materials_display()
 
 
-class EquipoSelectionPopup(Popup): # Popup for Reporte Diario Obra - No changes needed
+class EquipoSelectionPopup(Popup):  # Popup for Reporte Diario Obra - No changes needed
     def __init__(self, add_callback, main_app, **kwargs):
         self.add_callback = add_callback
         self.main_app = main_app
@@ -403,13 +421,15 @@ class EquipoSelectionPopup(Popup): # Popup for Reporte Diario Obra - No changes 
         self.selected_equipos_scroll = ScrollView(size_hint_y=0.4)
         self.selected_equipos_grid = GridLayout(cols=1, spacing=dp(5), size_hint_y=None, padding=dp(5))
         self.selected_equipos_grid.bind(minimum_height=self.selected_equipos_grid.setter('height'))
-        self.selected_equipos_scroll.add_widget(self.selected_equipos_grid) # Corrected line: adding grid, not scroll
+        self.selected_equipos_scroll.add_widget(
+            self.selected_equipos_grid)  # Corrected line: adding grid, not scroll
 
         selection_layout = GridLayout(cols=2, spacing=dp(10), size_hint_y=0.3, height=dp(120), padding=dp(10))
 
         self.equipo_name = Label(text="Equipo: ")
         self.propiedad_input = TextInput(hint_text='Propiedad', multiline=False, size_hint_y=None, height=dp(40))
-        self.quantity_input = TextInput(hint_text='Cantidad', multiline=False, input_filter='float', size_hint_y=None, height=dp(40))
+        self.quantity_input = TextInput(hint_text='Cantidad', multiline=False, input_filter='float', size_hint_y=None,
+                                        height=dp(40))
 
         selection_layout.add_widget(Label(text="Propiedad:"))
         selection_layout.add_widget(self.propiedad_input)
@@ -445,12 +465,13 @@ class EquipoSelectionPopup(Popup): # Popup for Reporte Diario Obra - No changes 
         if self.main_app.equipos_seleccionados:
             self.main_app.equipos_button.background_color = BTN_COLOR
 
-    def on_search_text(self, instance, value): # For Reporte Diario Obra - No changes needed
+    def on_search_text(self, instance, value):  # For Reporte Diario Obra - No changes needed
         self.equipos_list.clear_widgets()
         if not value:
             return
 
-        filtered_equipos = [e['nombre_equipo'] for e in self.main_app.equipos_data if value.lower() in e['nombre_equipo'].lower()]
+        filtered_equipos = [e['nombre_equipo'] for e in self.main_app.equipos_data if
+                            value.lower() in e['nombre_equipo'].lower()]
 
         for equipo in filtered_equipos:
             btn = Button(text=equipo, size_hint_y=None, height=dp(40), background_color=GRAY)
@@ -459,11 +480,12 @@ class EquipoSelectionPopup(Popup): # Popup for Reporte Diario Obra - No changes 
 
         unique_equipo_names = [e['nombre_equipo'] for e in self.main_app.equipos_data]
         if value and value not in filtered_equipos and value not in unique_equipo_names:
-            new_btn = Button(text=f"Agregar nuevo equipo: {value}", size_hint_y=None, height=dp(40), background_color=GREEN)
+            new_btn = Button(text=f"Agregar nuevo equipo: {value}", size_hint_y=None, height=dp(40),
+                             background_color=GREEN)
             new_btn.bind(on_release=lambda btn: self.select_new_equipo(value))
             self.equipos_list.add_widget(new_btn)
 
-    def select_equipo(self, equipo_name): # For Reporte Diario Obra - no changes needed
+    def select_equipo(self, equipo_name):  # For Reporte Diario Obra - no changes needed
         self.equipo_name.text = f"Equipo: {equipo_name}"
         self.propiedad_input.readonly = False
         self.propiedad_input.text = ""
@@ -476,7 +498,7 @@ class EquipoSelectionPopup(Popup): # Popup for Reporte Diario Obra - No changes 
         self.equipos_list.clear_widgets()
         self.search_input.text = equipo_name
 
-    def select_new_equipo(self, equipo_name): # For Reporte Diario Obra - no changes needed
+    def select_new_equipo(self, equipo_name):  # For Reporte Diario Obra - no changes needed
         self.equipo_name.text = f"Equipo: {equipo_name}"
         self.propiedad_input.readonly = False
         self.propiedad_input.text = ""
@@ -484,7 +506,7 @@ class EquipoSelectionPopup(Popup): # Popup for Reporte Diario Obra - No changes 
         self.equipos_list.clear_widgets()
         self.search_input.text = equipo_name
 
-    def add_equipo(self, *args): # For Reporte Diario Obra - no changes needed
+    def add_equipo(self, *args):  # For Reporte Diario Obra - no changes needed
         equipo_name = self.equipo_name.text.replace("Equipo: ", "")
         propiedad = self.propiedad_input.text
         cantidad = self.quantity_input.text
@@ -504,7 +526,7 @@ class EquipoSelectionPopup(Popup): # Popup for Reporte Diario Obra - No changes 
         except ValueError:
             print("Por favor ingrese una cantidad válida")
 
-    def update_selected_equipos_display(self): # For Reporte Diario Obra - no changes needed
+    def update_selected_equipos_display(self):  # For Reporte Diario Obra - no changes needed
         self.selected_equipos_grid.clear_widgets()
         grid = self.selected_equipos_grid
         grid.spacing = dp(5)
@@ -525,7 +547,7 @@ class EquipoSelectionPopup(Popup): # Popup for Reporte Diario Obra - No changes 
             text_layout = BoxLayout(
                 orientation='vertical',
                 size_hint_x=0.8,
-                padding=[0,0,0,0]
+                padding=[0, 0, 0, 0]
             )
 
             nombre_label = Label(
@@ -537,7 +559,7 @@ class EquipoSelectionPopup(Popup): # Popup for Reporte Diario Obra - No changes 
                 color=WHITE,
                 size_hint_y=0.5,
                 text_size=(None, None),
-                padding=[0,0]
+                padding=[0, 0]
             )
 
             detalles_label = Label(
@@ -548,7 +570,7 @@ class EquipoSelectionPopup(Popup): # Popup for Reporte Diario Obra - No changes 
                 color=WHITE,
                 size_hint_y=0.5,
                 text_size=(Window.width * 0.6, None),
-                padding=[0,0]
+                padding=[0, 0]
             )
 
             text_layout.add_widget(nombre_label)
@@ -569,7 +591,7 @@ class EquipoSelectionPopup(Popup): # Popup for Reporte Diario Obra - No changes 
             card.add_widget(delete_btn)
             self.selected_equipos_grid.add_widget(card)
 
-    def remove_equipo_from_popup(self, equipo_entry, equipo_layout): # For Reporte Diario Obra - no changes needed
+    def remove_equipo_from_popup(self, equipo_entry, equipo_layout):  # For Reporte Diario Obra - no changes needed
         self.main_app.equipos_seleccionados.remove(equipo_entry)
         self.selected_equipos_grid.remove_widget(equipo_layout)
         self.update_selected_equipos_display()
@@ -597,17 +619,18 @@ class VehiculoSelectionPopup(Popup):
         )
         search_layout.add_widget(self.search_input)
 
-        scroll = ScrollView(size_hint_y=0.3) # 30% del espacio
+        scroll = ScrollView(size_hint_y=0.3)  # 30% del espacio
         self.vehiculos_list = GridLayout(cols=1, spacing=dp(5), size_hint_y=None, padding=dp(5))
         self.vehiculos_list.bind(minimum_height=self.vehiculos_list.setter('height'))
         scroll.add_widget(self.vehiculos_list)
 
-        self.selected_vehiculos_scroll = ScrollView(size_hint_y=0.4) # 40% del espacio
+        self.selected_vehiculos_scroll = ScrollView(size_hint_y=0.4)  # 40% del espacio
         self.selected_vehiculos_grid = GridLayout(cols=1, spacing=dp(5), size_hint_y=None, padding=dp(5))
         self.selected_vehiculos_grid.bind(minimum_height=self.selected_vehiculos_grid.setter('height'))
         self.selected_vehiculos_scroll.add_widget(self.selected_vehiculos_grid)
 
-        selection_layout = GridLayout(cols=2, spacing=dp(10), size_hint_y=0.3, height=dp(120), padding=dp(10)) # 30% del espacio
+        selection_layout = GridLayout(cols=2, spacing=dp(10), size_hint_y=0.3, height=dp(120),
+                                      padding=dp(10))  # 30% del espacio
 
         self.vehiculo_name = Label(text="Vehículo: ")
         self.propiedad_input = TextInput(hint_text='Propiedad', multiline=False, size_hint_y=None, height=dp(40))
@@ -652,7 +675,8 @@ class VehiculoSelectionPopup(Popup):
         if not value:
             return
 
-        filtered_vehiculos = [v['nombre_vehiculo'] for v in self.main_app.vehiculos_data if value.lower() in v['nombre_vehiculo'].lower()]
+        filtered_vehiculos = [v['nombre_vehiculo'] for v in self.main_app.vehiculos_data if
+                              value.lower() in v['nombre_vehiculo'].lower()]
 
         for vehiculo in filtered_vehiculos:
             btn = Button(text=vehiculo, size_hint_y=None, height=dp(40), background_color=GRAY)
@@ -801,17 +825,17 @@ class PersonalSelectionPopup(Popup):
         )
         search_layout.add_widget(self.search_input)
 
-        scroll = ScrollView(size_hint_y=0.3) # 30% del espacio
+        scroll = ScrollView(size_hint_y=0.3)  # 30% del espacio
         self.personal_list = GridLayout(cols=1, spacing=dp(5), size_hint_y=None, padding=dp(5))
         self.personal_list.bind(minimum_height=self.personal_list.setter('height'))
         scroll.add_widget(self.personal_list)
 
-        self.selected_personal_scroll = ScrollView(size_hint_y=0.4) # 40% del espacio
+        self.selected_personal_scroll = ScrollView(size_hint_y=0.4)  # 40% del espacio
         self.selected_personal_grid = GridLayout(cols=1, spacing=dp(5), size_hint_y=None, padding=dp(5))
         self.selected_personal_grid.bind(minimum_height=self.selected_personal_grid.setter('height'))
         self.selected_personal_scroll.add_widget(self.selected_personal_grid)
 
-        selection_layout = GridLayout(cols=2, spacing=dp(10), size_hint_y=0.3, height=dp(120), padding=dp(10)) # 30% del espacio
+        selection_layout = GridLayout(cols=2, spacing=dp(10), size_hint_y=0.3, height=dp(120), padding=dp(10))  # 30% del espacio
 
         self.personal_name = Label(text="Personal: ")
         self.categoria_input = TextInput(hint_text='Categoría', multiline=False, size_hint_y=None, height=dp(40))
@@ -1010,8 +1034,8 @@ class ReporteObraApp(App):
         self.get_equipos_from_server()
         self.get_vehiculos_from_server()
         self.get_personal_from_server()
-        self.reporte_diario_submitted = False # Flag for single submission
-        self.requerimiento_materiales_submitted = False # Flag for single submission
+        self.reporte_diario_submitted = False  # Flag for single submission
+        self.requerimiento_materiales_submitted = False  # Flag for single submission
 
     def show_reporte_diario_screen(self):
         if not self.reporte_diario_submitted:
@@ -1134,9 +1158,9 @@ class RequerimientoMaterialesScreen(BoxLayout):
         self.equipos_data = main_app.equipos_data
 
         self.material_popup = MaterialSelectionPopupRequerimiento(add_callback=self.add_requerimiento_material, main_app=self)
-        self.equipo_popup = EquipoSelectionPopupRequerimiento(add_callback=self.add_requerimiento_equipo, main_app=self) # Use new EquipoSelectionPopupRequerimiento
+        self.equipo_popup = EquipoSelectionPopupRequerimiento(add_callback=self.add_requerimiento_equipo, main_app=self)  # Use new EquipoSelectionPopupRequerimiento
 
-        self.fecha_input = create_text_input(hint_text='Fecha (DD/MM/YYYY)') # Added Fecha label
+        self.fecha_input = create_text_input(hint_text='Fecha (DD/MM/YYYY)')  # Added Fecha label
         self.fecha_input.text = datetime.now().strftime('%d/%m/%Y')
         self.codigo_obra_input = create_text_input(hint_text='Código de Obra')
         self.nombre_ingeniero_input = create_text_input(hint_text='Nombre del Ingeniero')
@@ -1144,7 +1168,7 @@ class RequerimientoMaterialesScreen(BoxLayout):
         self.materiales_button = create_button('Agregar Material', color=GREEN, on_press=self.show_material_popup)
         self.equipos_button = create_button('Agregar Equipo', color=GREEN, on_press=self.show_equipo_popup)
         self.enviar_button = create_button('ENVIAR REQUERIMIENTOS', color=BTN_COLOR, on_press=self.enviar_requerimientos)
-        self.enviar_button.disabled = main_app.requerimiento_materiales_submitted # Disable button if already submitted
+        self.enviar_button.disabled = main_app.requerimiento_materiales_submitted  # Disable button if already submitted
 
         self.selected_items_scroll = ScrollView(size_hint_y=0.5)
         self.selected_items_grid = GridLayout(cols=1, spacing=dp(5), size_hint_y=None, padding=dp(5))
@@ -1183,8 +1207,8 @@ class RequerimientoMaterialesScreen(BoxLayout):
         self.requerimientos_seleccionados.append(requerimiento_entry)
         self.update_selected_items_display()
 
-    def add_requerimiento_equipo(self, equipo_name, cantidad, unidad, is_new_equipo=False): # unidad instead of propiedad
-        requerimiento_entry = RequerimientoEquipoEntry(equipo_name, unidad, cantidad) # Use RequerimientoEquipoEntry
+    def add_requerimiento_equipo(self, equipo_name, cantidad, unidad, is_new_equipo=False):  # unidad instead of propiedad
+        requerimiento_entry = RequerimientoEquipoEntry(equipo_name, unidad, cantidad)  # Use RequerimientoEquipoEntry
         self.requerimientos_seleccionados.append(requerimiento_entry)
         self.update_selected_items_display()
 
@@ -1235,9 +1259,9 @@ class RequerimientoMaterialesScreen(BoxLayout):
                     text_size=(Window.width * 0.6, None),
                     padding=[0,0]
                 )
-            elif isinstance(item, RequerimientoEquipoEntry): # Handle RequerimientoEquipoEntry
+            elif isinstance(item, RequerimientoEquipoEntry):  # Handle RequerimientoEquipoEntry
                 detalles_label = Label(
-                    text=f"[size={int(label_font_size)}]{item.cantidad} {item.unidad}[/size]", # Use item.unidad here
+                    text=f"[size={int(label_font_size)}]{item.cantidad} {item.unidad}[/size]",  # Use item.unidad here
                     markup=True,
                     halign='left',
                     valign='middle',
@@ -1277,37 +1301,37 @@ class RequerimientoMaterialesScreen(BoxLayout):
             return
 
         datos = {
-            "fecha": self.fecha_input.text, # Added fecha
+            "fecha": self.fecha_input.text,  # Added fecha
             "codigo_obra": self.codigo_obra_input.text,
             "nombre_ingeniero": self.nombre_ingeniero_input.text,
-            "requerimientos": [item.to_dict() for item in self.requerimientos_seleccionados] # to_dict() will work for both MaterialEntry and RequerimientoEquipoEntry
+            "requerimientos": [item.to_dict() for item in self.requerimientos_seleccionados]  # to_dict() will work for both MaterialEntry and RequerimientoEquipoEntry
         }
 
-        print("Datos a enviar requerimientos:", datos) # Log datos before sending
+        print("Datos a enviar requerimientos:", datos)  # Log datos before sending
 
         try:
-            response = requests.post(f"{API_URL}/recibir-requerimientos", json=datos, timeout=20) # Corrected URL
-            response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+            response = requests.post(f"{API_URL}/recibir-requerimientos", json=datos, timeout=20)  # Corrected URL
+            response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
             if response.status_code == 200:
                 print("Requerimientos enviados exitosamente")
                 self.requerimientos_seleccionados = []
                 self.update_selected_items_display()
                 self.show_success_popup()
-                self.enviar_button.disabled = True # Disable button after successful submission
-                self.main_app.requerimiento_materiales_submitted = True # Set flag in main app
+                self.enviar_button.disabled = True  # Disable button after successful submission
+                self.main_app.requerimiento_materiales_submitted = True  # Set flag in main app
             else:
                 print(f"Error al enviar requerimientos: {response.status_code} - {response.text}")
-                print(f"Error detail: {response.text}") # Print the error detail
+                print(f"Error detail: {response.text}")  # Print the error detail
         except requests.exceptions.ConnectionError:
             print(f"Error: No se pudo conectar al servidor para enviar los requerimientos.")
         except requests.exceptions.Timeout:
             print(f"Error: Tiempo de espera agotado al enviar los requerimientos al servidor.")
         except requests.exceptions.RequestException as e:
             print(f"Error al enviar los requerimientos: {e}")
-            print(f"Detailed error: {e.response.text if e.response else e}") # Print more details if available
+            print(f"Detailed error: {e.response.text if e.response else e}")  # Print more details if available
 
     def validar_requerimientos(self):
-        if not self.fecha_input.text: # Added fecha validation
+        if not self.fecha_input.text:  # Added fecha validation
             print("El campo 'Fecha' es obligatorio.")
             return False
         try:
@@ -1382,7 +1406,8 @@ class MaterialSelectionPopupRequerimiento(Popup):
 
         self.material_name = Label(text="Material: ")
         self.unit_input = TextInput(hint_text='Unidad', multiline=False, size_hint_y=None, height=dp(40))
-        self.quantity_input = TextInput(hint_text='Cantidad', multiline=False, input_filter='float', size_hint_y=None, height=dp(40))
+        self.quantity_input = TextInput(hint_text='Cantidad', multiline=False, input_filter='float', size_hint_y=None,
+                                        height=dp(40))
 
         selection_layout.add_widget(Label(text="Unidad:"))
         selection_layout.add_widget(self.unit_input)
@@ -1413,7 +1438,8 @@ class MaterialSelectionPopupRequerimiento(Popup):
         if not value:
             return
 
-        filtered_materials = [m['nombre_material'] for m in self.main_app.materiales_data if value.lower() in m['nombre_material'].lower()]
+        filtered_materials = [m['nombre_material'] for m in self.main_app.materiales_data if
+                              value.lower() in m['nombre_material'].lower()]
 
         for material in filtered_materials:
             btn = Button(text=material, size_hint_y=None, height=dp(40), background_color=GRAY)
@@ -1422,7 +1448,8 @@ class MaterialSelectionPopupRequerimiento(Popup):
 
         unique_material_names = [m['nombre_material'] for m in self.main_app.materiales_data]
         if value and value not in filtered_materials and value not in unique_material_names:
-            new_btn = Button(text=f"Agregar nuevo material: {value}", size_hint_y=None, height=dp(40), background_color=GREEN)
+            new_btn = Button(text=f"Agregar nuevo material: {value}", size_hint_y=None, height=dp(40),
+                             background_color=GREEN)
             new_btn.bind(on_release=lambda btn: self.select_new_material(value))
             self.materials_list.add_widget(new_btn)
 
@@ -1468,7 +1495,7 @@ class MaterialSelectionPopupRequerimiento(Popup):
             print("Por favor ingrese una cantidad válida")
 
 
-class EquipoSelectionPopupRequerimiento(Popup): # Popup for Requerimiento Materiales - Modified
+class EquipoSelectionPopupRequerimiento(Popup):  # Popup for Requerimiento Materiales - Modified
     def __init__(self, add_callback, main_app, **kwargs):
         self.add_callback = add_callback
         self.main_app = main_app
@@ -1498,21 +1525,25 @@ class EquipoSelectionPopupRequerimiento(Popup): # Popup for Requerimiento Materi
         selection_layout = GridLayout(cols=2, spacing=dp(10), size_hint_y=0.5, height=dp(120), padding=dp(10))
 
         self.equipo_name = Label(text="Equipo: ")
-        self.unidad_input = TextInput(hint_text='Unidad', multiline=False, size_hint_y=None, height=dp(40)) # Changed to unidad_input - Now Unidad is used for Requerimiento
-        self.quantity_input = TextInput(hint_text='Cantidad', multiline=False, input_filter='float', size_hint_y=None, height=dp(40))
+        self.unidad_input = TextInput(hint_text='Unidad', multiline=False, size_hint_y=None,
+                                      height=dp(40))  # Changed to unidad_input - Now Unidad is used for Requerimiento
+        self.quantity_input = TextInput(hint_text='Cantidad', multiline=False, input_filter='float', size_hint_y=None,
+                                        height=dp(40))
 
-        selection_layout.add_widget(Label(text="Unidad:")) # Changed to Unidad Label - Now Unidad is used for Requerimiento
-        selection_layout.add_widget(self.unidad_input) # Changed to unidad_input
+        selection_layout.add_widget(Label(
+            text="Unidad:"))  # Changed to Unidad Label - Now Unidad is used for Requerimiento
+        selection_layout.add_widget(
+            self.unidad_input)  # Changed to unidad_input
         selection_layout.add_widget(Label(text="Cantidad:"))
         selection_layout.add_widget(self.quantity_input)
 
         buttons_layout = BoxLayout(size_hint_y=None, height=dp(50), spacing=dp(10))
 
         cancel_button = Button(text='Cancelar', size_hint_x=0.5, background_color=RED)
-        add_button = Button(text='Agregar', size_hint_x=0.5, background_color=GREEN)
+        add_button = Button(text='Agregar', size_hint_x=0.5, background_color=GREEN)  # Corrected: Set background_color here
 
         cancel_button.bind(on_release=self.dismiss)
-        add_button = Button(text='Agregar', on_release=self.add_equipo_requerimiento) # Changed to add_equipo_requerimiento
+        add_button.bind(on_release=self.add_equipo_requerimiento)  # Changed to add_equipo_requerimiento
 
         buttons_layout.add_widget(cancel_button)
         buttons_layout.add_widget(add_button)
@@ -1525,12 +1556,13 @@ class EquipoSelectionPopupRequerimiento(Popup): # Popup for Requerimiento Materi
         self.content = layout
         self.search_input.bind(text=self.on_search_text)
 
-    def on_search_text(self, instance, value): # For Requerimiento Materiales - No changes needed
+    def on_search_text(self, instance, value):  # For Requerimiento Materiales - No changes needed
         self.equipos_list.clear_widgets()
         if not value:
             return
 
-        filtered_equipos = [e['nombre_equipo'] for e in self.main_app.equipos_data if value.lower() in e['nombre_equipo'].lower()]
+        filtered_equipos = [e['nombre_equipo'] for e in self.main_app.equipos_data if
+                            value.lower() in e['nombre_equipo'].lower()]
 
         for equipo in filtered_equipos:
             btn = Button(text=equipo, size_hint_y=None, height=dp(40), background_color=GRAY)
@@ -1539,44 +1571,45 @@ class EquipoSelectionPopupRequerimiento(Popup): # Popup for Requerimiento Materi
 
         unique_equipo_names = [e['nombre_equipo'] for e in self.main_app.equipos_data]
         if value and value not in filtered_equipos and value not in unique_equipo_names:
-            new_btn = Button(text=f"Agregar nuevo equipo: {value}", size_hint_y=None, height=dp(40), background_color=GREEN)
+            new_btn = Button(text=f"Agregar nuevo equipo: {value}", size_hint_y=None, height=dp(40),
+                             background_color=GREEN)
             new_btn.bind(on_release=lambda btn: self.select_new_equipo(value))
             self.equipos_list.add_widget(new_btn)
 
-    def select_equipo(self, equipo_name): # For Requerimiento Materiales - No changes needed
+    def select_equipo(self, equipo_name):  # For Requerimiento Materiales - No changes needed
         self.equipo_name.text = f"Equipo: {equipo_name}"
-        self.unidad_input.readonly = False # Changed to unidad_input
-        self.unidad_input.text = "" # Changed to unidad_input
+        self.unidad_input.readonly = False  # Changed to unidad_input
+        self.unidad_input.text = ""  # Changed to unidad_input
         self.is_new_equipo = False
         for equipo in self.main_app.equipos_data:
             if equipo['nombre_equipo'] == equipo_name:
-                unidad = "und" # Default unidad for equipos in requerimientos
-                self.unidad_input.text = unidad # Changed to unidad_input
+                unidad = "und"  # Default unidad for equipos in requerimientos
+                self.unidad_input.text = unidad  # Changed to unidad_input
                 break
         self.equipos_list.clear_widgets()
         self.search_input.text = equipo_name
 
-    def select_new_equipo(self, equipo_name): # For Requerimiento Materiales - No changes needed
+    def select_new_equipo(self, equipo_name):  # For Requerimiento Materiales - No changes needed
         self.equipo_name.text = f"Equipo: {equipo_name}"
-        self.unidad_input.readonly = False # Changed to unidad_input
-        self.unidad_input.text = "" # Changed to unidad_input
+        self.unidad_input.readonly = False  # Changed to unidad_input
+        self.unidad_input.text = ""  # Changed to unidad_input
         self.is_new_equipo = True
         self.equipos_list.clear_widgets()
         self.search_input.text = equipo_name
 
-    def add_equipo_requerimiento(self, *args): # Changed function name and logic for Requerimiento
+    def add_equipo_requerimiento(self, *args):  # Changed function name and logic for Requerimiento
         equipo_name = self.equipo_name.text.replace("Equipo: ", "")
-        unidad = self.unidad_input.text # Now unidad is taken from unidad_input
+        unidad = self.unidad_input.text  # Now unidad is taken from unidad_input
         cantidad = self.quantity_input.text
 
-        if not all([equipo_name, unidad, cantidad]): # Now check for unidad as well
+        if not all([equipo_name, unidad, cantidad]):  # Now check for unidad as well
             return
 
         try:
             cantidad = float(cantidad)
-            self.add_callback(equipo_name, cantidad, unidad, self.is_new_equipo) # Pass unidad to add_callback
+            self.add_callback(equipo_name, cantidad, unidad, self.is_new_equipo)  # Pass unidad to add_callback
             self.search_input.text = ''
-            self.unidad_input.text = '' # Clear unidad_input
+            self.unidad_input.text = ''  # Clear unidad_input
             self.quantity_input.text = ''
             self.equipo_name.text = 'Equipo: '
             self.is_new_equipo = False
@@ -1589,7 +1622,7 @@ class ReporteDiarioObraScreen(BoxLayout):
     def __init__(self, main_app, **kwargs):
         super().__init__(**kwargs)
         self.main_app = main_app
-        self.orientation='vertical'
+        self.orientation = 'vertical'
 
         self.respuestas = {}
         self.materiales_seleccionados = []
@@ -1600,11 +1633,11 @@ class ReporteDiarioObraScreen(BoxLayout):
         self.equipos_data = main_app.equipos_data
         self.vehiculos_data = main_app.vehiculos_data
         self.personal_data = main_app.personal_data
-        self.new_materials_to_add = main_app.new_materials_to_add # List to hold new materials to be added to CSV
-        self.new_equipos_to_add = main_app.new_equipos_to_add # List to hold new equipos to be added to CSV
-        self.new_vehiculos_to_add = main_app.new_vehiculos_to_add # List to hold new vehiculos to be added to CSV
-        self.new_personal_to_add = main_app.new_personal_to_add # List to hold new personal to be added to CSV
-        self.submit_button = None # Initialize submit_button as class attribute
+        self.new_materials_to_add = main_app.new_materials_to_add  # List to hold new materials to be added to CSV
+        self.new_equipos_to_add = main_app.new_equipos_to_add  # List to hold new equipos to be added to CSV
+        self.new_vehiculos_to_add = main_app.new_vehiculos_to_add  # List to hold new vehiculos to be added to CSV
+        self.new_personal_to_add = main_app.new_personal_to_add  # List to hold new personal to be added to CSV
+        self.submit_button = None  # Initialize submit_button as class attribute
 
         self.campos = [
             {"nombre": "fecha", "tipo": "date", "etiqueta": "Fecha"},
@@ -1623,7 +1656,8 @@ class ReporteDiarioObraScreen(BoxLayout):
             {"nombre": "observaciones", "tipo": "text", "etiqueta": "Observaciones"}
         ]
 
-        form_layout = BoxLayout(orientation='vertical', spacing=dp(margin), padding=(dp(margin), dp(margin)), size_hint_y=None)
+        form_layout = BoxLayout(orientation='vertical', spacing=dp(margin), padding=(dp(margin), dp(margin)),
+                                size_hint_y=None)
         form_layout.bind(minimum_height=form_layout.setter("height"))
 
         for campo in self.campos:
@@ -1660,12 +1694,12 @@ class ReporteDiarioObraScreen(BoxLayout):
             self.respuestas[campo["nombre"]] = input_widget
             form_layout.add_widget(input_widget)
 
-        self.submit_button = create_button('ENVIAR DATOS', size=(400, button_height), color=BTN_COLOR, on_press=self.confirmar_envio) # Assign to self.submit_button
+        self.submit_button = create_button('ENVIAR DATOS', size=(400, button_height), color=BTN_COLOR,
+                                           on_press=self.confirmar_envio)  # Assign to self.submit_button
         self.submit_button.font_size = label_font_size
-        self.submit_button.disabled = main_app.reporte_diario_submitted # Disable button if already submitted
+        self.submit_button.disabled = main_app.reporte_diario_submitted  # Disable button if already submitted
         form_layout.add_widget(Widget(size_hint_y=None, height=dp(margin * 0.1)))
         form_layout.add_widget(self.submit_button)
-
 
         self.material_popup = MaterialSelectionPopup(add_callback=self.add_material_with_quantity, main_app=self)
         self.equipo_popup = EquipoSelectionPopup(add_callback=self.add_equipo_with_quantity, main_app=self)
@@ -1677,32 +1711,35 @@ class ReporteDiarioObraScreen(BoxLayout):
 
         self.add_widget(scroll)
 
-
     def setup_material_input(self, form_layout):
         material_layout = BoxLayout(orientation='vertical', spacing=dp(margin), size_hint_y=None)
         material_layout.bind(minimum_height=material_layout.setter("height"))
-        self.materiales_button = create_button('Seleccionar Materiales', size=(400, button_height), color=GREEN, on_press=self.show_material_popup)
+        self.materiales_button = create_button('Seleccionar Materiales', size=(400, button_height), color=GREEN,
+                                               on_press=self.show_material_popup)
         material_layout.add_widget(self.materiales_button)
         form_layout.add_widget(material_layout)
 
     def setup_equipo_input(self, form_layout):
         equipo_layout = BoxLayout(orientation='vertical', spacing=dp(margin), size_hint_y=None)
         equipo_layout.bind(minimum_height=equipo_layout.setter("height"))
-        self.equipos_button = create_button('Seleccionar Equipos', size=(400, button_height), color=GREEN, on_press=self.show_equipo_popup)
+        self.equipos_button = create_button('Seleccionar Equipos', size=(400, button_height), color=GREEN,
+                                            on_press=self.show_equipo_popup)
         equipo_layout.add_widget(self.equipos_button)
         form_layout.add_widget(equipo_layout)
 
     def setup_vehiculo_input(self, form_layout):
         vehiculo_layout = BoxLayout(orientation='vertical', spacing=dp(margin), size_hint_y=None)
         vehiculo_layout.bind(minimum_height=vehiculo_layout.setter("height"))
-        self.vehiculos_button = create_button('Seleccionar Vehículos', size=(400, button_height), color=GREEN, on_press=self.show_vehiculo_popup)
+        self.vehiculos_button = create_button('Seleccionar Vehículos', size=(400, button_height), color=GREEN,
+                                              on_press=self.show_vehiculo_popup)
         vehiculo_layout.add_widget(self.vehiculos_button)
         form_layout.add_widget(vehiculo_layout)
 
     def setup_personal_input(self, form_layout):
         personal_layout = BoxLayout(orientation='vertical', spacing=dp(margin), size_hint_y=None)
         personal_layout.bind(minimum_height=personal_layout.setter("height"))
-        self.personal_button = create_button('Seleccionar Personal', size=(400, button_height), color=GREEN, on_press=self.show_personal_popup)
+        self.personal_button = create_button('Seleccionar Personal', size=(400, button_height), color=GREEN,
+                                             on_press=self.show_personal_popup)
         personal_layout.add_widget(self.personal_button)
         form_layout.add_widget(personal_layout)
 
@@ -1744,7 +1781,8 @@ class ReporteDiarioObraScreen(BoxLayout):
         material_entry = MaterialEntry(material_name, unit, float(quantity))
         self.materiales_seleccionados.append(material_entry)
         if is_new_material:
-            self.new_materials_to_add.append({'nombre_material': material_name, 'unidad': unit}) # Add to new items list
+            self.new_materials_to_add.append(
+                {'nombre_material': material_name, 'unidad': unit})  # Add to new items list
         self.material_popup.update_selected_materials_display()
         self.materiales_button.background_color = BTN_COLOR
 
@@ -1772,7 +1810,6 @@ class ReporteDiarioObraScreen(BoxLayout):
         self.personal_popup.update_selected_personal_display()
         self.personal_button.background_color = BTN_COLOR
 
-
     def remove_material(self, material_entry, material_layout):
         self.materiales_seleccionados.remove(material_entry)
         self.material_popup.update_selected_materials_display()
@@ -1797,7 +1834,6 @@ class ReporteDiarioObraScreen(BoxLayout):
         if not self.personal_seleccionados:
             self.personal_button.background_color = GREEN
 
-
     def show_success_popup(self):
         content = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(10))
         message_label = Label(text="Los datos se han enviado correctamente", font_size=label_font_size, color=WHITE)
@@ -1810,7 +1846,7 @@ class ReporteDiarioObraScreen(BoxLayout):
             size=(dp(400), dp(200)),
             auto_dismiss=True,
             separator_height=0,
-            background_color = (0.1, 0.1, 0.1, 0.9)
+            background_color=(0.1, 0.1, 0.1, 0.9)
         )
         popup.open()
         anim = Animation(opacity=0, duration=3.0) + Animation(size=(0, 0), duration=3.0)
@@ -1855,7 +1891,6 @@ class ReporteDiarioObraScreen(BoxLayout):
                 break
         if not new_items_added_successfully: return False
 
-
         datos = {
             campo["nombre"]: (
                 [material.to_dict() for material in self.materiales_seleccionados] if campo["nombre"] == "materiales_usados" else
@@ -1867,25 +1902,25 @@ class ReporteDiarioObraScreen(BoxLayout):
             )
             for campo in self.campos
         }
-        print("Datos a enviar reporte diario:", datos) # Log datos before sending
+        print("Datos a enviar reporte diario:", datos)  # Log datos before sending
 
         try:
             response = requests.post(f"{API_URL}/recibir-datos", json=datos, timeout=20)
-            response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+            response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
             if response.status_code == 200:
                 print("Datos enviados exitosamente")
                 self.materiales_seleccionados = []
                 self.equipos_seleccionados = []
                 self.vehiculos_seleccionados = []
                 self.personal_seleccionados = []
-                self.new_materials_to_add = [] # Clear new materials list
-                self.new_equipos_to_add = [] # Clear new equipos list
-                self.new_vehiculos_to_add = [] # Clear new vehiculos list
-                self.new_personal_to_add = [] # Clear new personal list
+                self.new_materials_to_add = []  # Clear new materials list
+                self.new_equipos_to_add = []  # Clear new equipos list
+                self.new_vehiculos_to_add = []  # Clear new vehiculos list
+                self.new_personal_to_add = []  # Clear new personal list
                 self.show_success_popup()
-                self.submit_button.disabled = True # Disable button after successful submission # Removed, submit_button not defined here.
-                self.main_app.reporte_diario_submitted = True # Set flag in main app
-                instance.disabled = True # Disable the button that called this function.
+                self.submit_button.disabled = True  # Disable button after successful submission # Removed, submit_button not defined here.
+                self.main_app.reporte_diario_submitted = True  # Set flag in main app
+                instance.disabled = True  # Disable the button that called this function.
             else:
                 print(f"Error al enviar datos: {response.status_code} - {response.text}")
         except requests.exceptions.ConnectionError:
@@ -1894,11 +1929,10 @@ class ReporteDiarioObraScreen(BoxLayout):
             print(f"Error: Tiempo de espera agotado al enviar los datos al servidor.")
         except Exception as e:
             print(f"Error al enviar los datos: {e}")
-            if isinstance(e, requests.exceptions.RequestException): # Check if it's a RequestException
-                print(f"Detailed error: {e.response.text if e.response else e}") # Print response text if available
-            else: # Handle other exceptions
+            if isinstance(e, requests.exceptions.RequestException):  # Check if it's a RequestException
+                print(f"Detailed error: {e.response.text if e.response else e}")  # Print response text if available
+            else:  # Handle other exceptions
                 print(f"Detailed error: {e}")
-
 
     def validar_datos(self):
         for campo in self.campos:

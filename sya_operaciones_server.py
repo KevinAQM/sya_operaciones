@@ -1,31 +1,41 @@
+# sya_operaciones_server.py
 import os
 import logging
 from datetime import datetime
 import pandas as pd
 import openpyxl
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, send_from_directory
+import zipfile
 
 app = Flask(__name__)
 
-# Usar una ruta absoluta para el archivo Excel
+# Usar rutas absolutas
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 EXCEL_FILE = os.path.join(BASE_DIR, "registros_trabajo.xlsx")
-REQUERIMIENTOS_EXCEL_FILE = os.path.join(BASE_DIR, "requerimientos_obra.xlsx") # Nuevo archivo para requerimientos
+REQUERIMIENTOS_EXCEL_FILE = os.path.join(BASE_DIR, "requerimientos_obra.xlsx")
 MATERIALES_CSV_PATH = os.path.join(BASE_DIR, "operaciones_materiales.csv")
 EQUIPOS_CSV_PATH = os.path.join(BASE_DIR, "operaciones_equipos.csv")
 VEHICULOS_CSV_PATH = os.path.join(BASE_DIR, "operaciones_vehiculos.csv")
 PERSONAL_CSV_PATH = os.path.join(BASE_DIR, "operaciones_personal.csv")
+
+# Archivo Excel y directorio para registros de choferes
+REGISTROS_CHOFERES_EXCEL = os.path.join(BASE_DIR, "registros_choferes.xlsx")
+FOTOS_KM_DIR = os.path.join(BASE_DIR, "fotos_km")
+
+# Ruta al archivo CSV de conductores y vehiculos
+CONDUCTORES_CSV_PATH = os.path.join(BASE_DIR, "aem_conductores.csv")
+VEHICULOS_INFO_CSV_PATH = os.path.join(BASE_DIR, "aem_vehiculos.csv")
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 def inicializar_excel():
+    """Inicializa los archivos Excel si no existen."""
     # Inicializar Excel de Reporte Diario
     if not os.path.exists(EXCEL_FILE):
         logging.info(f"Creando archivo Excel de reporte diario en: {EXCEL_FILE}")
         wb = openpyxl.Workbook()
-        # Hoja "Reporte Principal"
         ws1 = wb.active
         ws1.title = "Reporte Principal"
         headers_reporte = [
@@ -35,35 +45,18 @@ def inicializar_excel():
             "Incidentes", "Plan Siguiente Día", "Observaciones"
         ]
         ws1.append(headers_reporte)
-
-        # Hoja "Materiales Usados"
         ws2 = wb.create_sheet(title="Materiales Usados")
-        headers_materiales = [
-            "Fecha", "Código Obra", "Nombre Ingeniero"
-        ]
+        headers_materiales = ["Fecha", "Código Obra", "Nombre Ingeniero"]
         ws2.append(headers_materiales)
-
-        # Hoja "Equipos Usados"
         ws3 = wb.create_sheet(title="Equipos Usados")
-        headers_equipos = [
-            "Fecha", "Código Obra", "Nombre Ingeniero"
-        ]
+        headers_equipos = ["Fecha", "Código Obra", "Nombre Ingeniero"]
         ws3.append(headers_equipos)
-
-        # Hoja "Vehículos Usados"
         ws4 = wb.create_sheet(title="Vehículos Usados")
-        headers_vehiculos = [
-            "Fecha", "Código Obra", "Nombre Ingeniero"
-        ]
+        headers_vehiculos = ["Fecha", "Código Obra", "Nombre Ingeniero"]
         ws4.append(headers_vehiculos)
-
-        # Hoja "Personal de Campo"
         ws5 = wb.create_sheet(title="Personal de Campo")
-        headers_personal = [
-            "Fecha", "Código Obra", "Nombre Ingeniero"
-        ]
+        headers_personal = ["Fecha", "Código Obra", "Nombre Ingeniero"]
         ws5.append(headers_personal)
-
         wb.save(EXCEL_FILE)
     else:
         logging.info(f"El archivo Excel de reporte diario ya existe en: {EXCEL_FILE}")
@@ -74,17 +67,34 @@ def inicializar_excel():
         wb_req = openpyxl.Workbook()
         ws_req = wb_req.active
         ws_req.title = "Requerimientos"
-        headers_requerimientos_inicial = [
-            "Fecha", "Código Obra", "Nombre Ingeniero"
-        ]
+        headers_requerimientos_inicial = ["Fecha", "Código Obra", "Nombre Ingeniero"]
         ws_req.append(headers_requerimientos_inicial)
         wb_req.save(REQUERIMIENTOS_EXCEL_FILE)
     else:
         logging.info(f"El archivo Excel de requerimientos ya existe en: {REQUERIMIENTOS_EXCEL_FILE}")
 
+    # Inicializar Excel de Registros de Choferes
+    if not os.path.exists(REGISTROS_CHOFERES_EXCEL):
+        logging.info(f"Creando archivo Excel de registros de choferes en: {REGISTROS_CHOFERES_EXCEL}")
+        wb_choferes = openpyxl.Workbook()
+        ws_choferes = wb_choferes.active
+        ws_choferes.title = "Registros"
+        headers_choferes = ["Nombre del Chofer", "Vehículo", "Placa", "Fecha de Salida", "Hora de Salida",
+            "Ubicación Inicial", "Kilometraje Inicial", "Observaciones Salida", "Fecha de Llegada", "Hora de Retorno",
+            "Ubicación Final", "Kilometraje Final", "Observaciones Llegada"] # Headers actualizados
+        ws_choferes.append(headers_choferes)
+        wb_choferes.save(REGISTROS_CHOFERES_EXCEL)
+    else:
+        logging.info(f"El archivo Excel de registros de choferes ya existe en: {REGISTROS_CHOFERES_EXCEL}")
+
+    # Crear directorio de fotos si no existe
+    if not os.path.exists(FOTOS_KM_DIR):
+        os.makedirs(FOTOS_KM_DIR)
+        logging.info(f"Directorio de fotos creado: {FOTOS_KM_DIR}")
 
 def actualizar_cabeceras_materiales(ws, num_materiales):
-    headers = list(ws.rows)[0] # Correct way to get headers in openpyxl
+    """Actualiza las cabeceras de la hoja de materiales."""
+    headers = list(ws.rows)[0]
     num_headers_actuales = len(headers)
 
     ultimo_material = 0
@@ -107,7 +117,8 @@ def actualizar_cabeceras_materiales(ws, num_materiales):
         num_headers_actuales += 3
 
 def actualizar_cabeceras_equipos(ws, num_equipos):
-    headers = list(ws.rows)[0] # Correct way to get headers in openpyxl
+    """Actualiza las cabeceras de la hoja de equipos."""
+    headers = list(ws.rows)[0]
     num_headers_actuales = len(headers)
 
     ultimo_equipo = 0
@@ -130,7 +141,8 @@ def actualizar_cabeceras_equipos(ws, num_equipos):
         num_headers_actuales += 3
 
 def actualizar_cabeceras_vehiculos(ws, num_vehiculos):
-    headers = list(ws.rows)[0] # Correct way to get headers in openpyxl
+    """Actualiza las cabeceras de la hoja de vehículos."""
+    headers = list(ws.rows)[0]
     num_headers_actuales = len(headers)
 
     ultimo_vehiculo = 0
@@ -153,7 +165,8 @@ def actualizar_cabeceras_vehiculos(ws, num_vehiculos):
         num_headers_actuales += 3
 
 def actualizar_cabeceras_personal(ws, num_personal):
-    headers = list(ws.rows)[0] # Correct way to get headers in openpyxl
+    """Actualiza las cabeceras de la hoja de personal."""
+    headers = list(ws.rows)[0]
     num_headers_actuales = len(headers)
 
     ultimo_personal = 0
@@ -176,7 +189,8 @@ def actualizar_cabeceras_personal(ws, num_personal):
         num_headers_actuales += 3
 
 def actualizar_cabeceras_requerimientos(ws, num_items):
-    headers = list(ws.rows)[0] # Correct way to get headers in openpyxl
+    """Actualiza las cabeceras de la hoja de requerimientos."""
+    headers = list(ws.rows)[0]
     num_headers_actuales = len(headers)
 
     ultimo_item = 0
@@ -200,6 +214,7 @@ def actualizar_cabeceras_requerimientos(ws, num_items):
 
 
 def procesar_datos(datos):
+    """Procesa los datos del reporte diario."""
     try:
         wb = openpyxl.load_workbook(EXCEL_FILE)
         ws_reporte = wb["Reporte Principal"]
@@ -208,11 +223,9 @@ def procesar_datos(datos):
         ws_vehiculos = wb["Vehículos Usados"]
         ws_personal = wb["Personal de Campo"]
 
-
         # Preparar fila de datos para "Reporte Principal"
         fila_reporte = [
-            # Formatear la fecha como DATE en "Reporte Principal"
-            datetime.strptime(datos.get('fecha', ''), '%d/%m/%Y').date(),  # Fecha como date
+            datetime.strptime(datos.get('fecha', ''), '%d/%m/%Y').date(),
             datos.get('codigo_obra', ''),
             datos.get('nombre_ingeniero', ''),
             datos.get('nombre_supervisor', ''),
@@ -225,7 +238,7 @@ def procesar_datos(datos):
         ]
         ws_reporte.append(fila_reporte)
 
-        # Procesar materiales usados para "Materiales Usados"
+        # Procesar materiales usados
         materiales = datos.get('materiales_usados', [])
         actualizar_cabeceras_materiales(ws_materiales, len(materiales))
         fila_materiales = [
@@ -273,7 +286,6 @@ def procesar_datos(datos):
             fila_personal.extend([personal['nombre_completo'], personal['categoria'], personal['horas_extras']])
         ws_personal.append(fila_personal)
 
-
         wb.save(EXCEL_FILE)
         logging.info(f"Datos recibidos de {datos.get('nombre_ingeniero', 'Unknown')} procesados exitosamente")
 
@@ -281,8 +293,9 @@ def procesar_datos(datos):
         logging.error(f"Error al procesar datos: {str(e)}")
 
 def procesar_requerimientos(datos):
+    """Procesa los datos de requerimientos."""
     logging.info("Datos de requerimientos recibidos:")
-    logging.info(datos)  # Log the received data for debugging
+    logging.info(datos)
     try:
         wb_req = openpyxl.load_workbook(REQUERIMIENTOS_EXCEL_FILE)
         ws_requerimientos = wb_req["Requerimientos"]
@@ -291,7 +304,7 @@ def procesar_requerimientos(datos):
         actualizar_cabeceras_requerimientos(ws_requerimientos, len(requerimientos))
 
         fila_requerimientos = [
-            datetime.strptime(datos.get('fecha', ''), '%d/%m/%Y').date(), # Fecha actual si no viene
+            datetime.strptime(datos.get('fecha', ''), '%d/%m/%Y').date(),
             datos.get('codigo_obra', ''),
             datos.get('nombre_ingeniero', '')
         ]
@@ -303,10 +316,10 @@ def procesar_requerimientos(datos):
         logging.info(f"Requerimientos recibidos de {datos.get('nombre_ingeniero', 'Unknown')} procesados exitosamente")
 
     except Exception as e:
-        logging.exception(f"Error al procesar requerimientos: {str(e)}") # Log exception details
-
+        logging.exception(f"Error al procesar requerimientos: {str(e)}")
 
 def descargar_excel_flask():
+    """Descarga el archivo Excel principal."""
     try:
         logging.info(f"Intentando enviar archivo: {EXCEL_FILE}")
         return send_file(EXCEL_FILE, as_attachment=True)
@@ -315,6 +328,7 @@ def descargar_excel_flask():
         return str(e), 500
 
 def descargar_requerimientos_excel_flask():
+    """Descarga el archivo Excel de requerimientos."""
     try:
         logging.info(f"Intentando enviar archivo de requerimientos: {REQUERIMIENTOS_EXCEL_FILE}")
         return send_file(REQUERIMIENTOS_EXCEL_FILE, as_attachment=True, download_name='requerimientos_obra.xlsx')
@@ -324,6 +338,7 @@ def descargar_requerimientos_excel_flask():
 
 
 def agregar_nuevo_material_csv(nombre_material, unidad):
+    """Agrega un nuevo material al archivo CSV."""
     try:
         df = pd.read_csv(MATERIALES_CSV_PATH)
         nuevo_material = pd.DataFrame([{'nombre_material': nombre_material, 'unidad': unidad}])
@@ -336,6 +351,7 @@ def agregar_nuevo_material_csv(nombre_material, unidad):
         return False
 
 def agregar_nuevo_equipo_csv(nombre_equipo, propiedad):
+    """Agrega un nuevo equipo al archivo CSV."""
     try:
         df = pd.read_csv(EQUIPOS_CSV_PATH)
         nuevo_equipo = pd.DataFrame([{'nombre_equipo': nombre_equipo, 'propiedad': propiedad}])
@@ -348,6 +364,7 @@ def agregar_nuevo_equipo_csv(nombre_equipo, propiedad):
         return False
 
 def agregar_nuevo_vehiculo_csv(nombre_vehiculo, placa, propiedad):
+    """Agrega un nuevo vehículo al archivo CSV."""
     try:
         df = pd.read_csv(VEHICULOS_CSV_PATH)
         nuevo_vehiculo = pd.DataFrame([{'nombre_vehiculo': nombre_vehiculo, 'placa': placa, 'propiedad': propiedad}])
@@ -360,6 +377,7 @@ def agregar_nuevo_vehiculo_csv(nombre_vehiculo, placa, propiedad):
         return False
 
 def agregar_nuevo_personal_csv(apellido_paterno, apellido_materno, nombres, categoria):
+    """Agrega un nuevo personal al archivo CSV."""
     try:
         df = pd.read_csv(PERSONAL_CSV_PATH)
         nuevo_personal = pd.DataFrame([{
@@ -380,52 +398,58 @@ def agregar_nuevo_personal_csv(apellido_paterno, apellido_materno, nombres, cate
 # Inicializar Excel al inicio
 inicializar_excel()
 
+# Rutas de la API
 @app.route('/api/materiales', methods=['GET'])
 def get_materiales():
+    """Obtiene la lista de materiales."""
     try:
+        if not os.path.exists(MATERIALES_CSV_PATH):
+            return jsonify({"error": f"No se encontró el archivo de materiales en {MATERIALES_CSV_PATH}"}), 404
         df = pd.read_csv(MATERIALES_CSV_PATH)
         materiales = df.to_dict(orient='records')
         return jsonify(materiales)
-    except FileNotFoundError:
-        return jsonify({"error": f"No se encontró el archivo de materiales en {MATERIALES_CSV_PATH}"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/equipos', methods=['GET'])
 def get_equipos():
+    """Obtiene la lista de equipos."""
     try:
+        if not os.path.exists(EQUIPOS_CSV_PATH):
+             return jsonify({"error": f"No se encontró el archivo de equipos en {EQUIPOS_CSV_PATH}"}), 404
         df = pd.read_csv(EQUIPOS_CSV_PATH)
         equipos = df.to_dict(orient='records')
         return jsonify(equipos)
-    except FileNotFoundError:
-        return jsonify({"error": f"No se encontró el archivo de equipos en {EQUIPOS_CSV_PATH}"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/vehiculos', methods=['GET'])
 def get_vehiculos():
+    """Obtiene la lista de vehículos."""
     try:
+        if not os.path.exists(VEHICULOS_CSV_PATH):
+            return jsonify({"error": f"No se encontró el archivo de vehículos en {VEHICULOS_CSV_PATH}"}), 404
         df = pd.read_csv(VEHICULOS_CSV_PATH)
         vehiculos = df.to_dict(orient='records')
         return jsonify(vehiculos)
-    except FileNotFoundError:
-        return jsonify({"error": f"No se encontró el archivo de vehículos en {VEHICULOS_CSV_PATH}"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/personal', methods=['GET'])
 def get_personal():
+    """Obtiene la lista de personal."""
     try:
+        if not os.path.exists(PERSONAL_CSV_PATH):
+            return jsonify({"error": f"No se encontró el archivo de personal en {PERSONAL_CSV_PATH}"}), 404
         df = pd.read_csv(PERSONAL_CSV_PATH)
         personal = df.to_dict(orient='records')
         return jsonify(personal)
-    except FileNotFoundError:
-        return jsonify({"error": f"No se encontró el archivo de personal en {PERSONAL_CSV_PATH}"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/materiales/new', methods=['POST'])
 def new_material():
+    """Agrega un nuevo material."""
     data = request.json
     if not data or 'nombre_material' not in data or 'unidad' not in data:
         return jsonify({"error": "Nombre de material y unidad son requeridos"}), 400
@@ -436,6 +460,7 @@ def new_material():
 
 @app.route('/api/equipos/new', methods=['POST'])
 def new_equipo():
+    """Agrega un nuevo equipo."""
     data = request.json
     if not data or 'nombre_equipo' not in data or 'propiedad' not in data:
         return jsonify({"error": "Nombre de equipo y propiedad son requeridos"}), 400
@@ -446,6 +471,7 @@ def new_equipo():
 
 @app.route('/api/vehiculos/new', methods=['POST'])
 def new_vehiculo():
+    """Agrega un nuevo vehículo."""
     data = request.json
     if not data or 'nombre_vehiculo' not in data or 'placa' not in data or 'propiedad' not in data:
         return jsonify({"error": "Nombre de vehículo, placa y propiedad son requeridos"}), 400
@@ -456,6 +482,7 @@ def new_vehiculo():
 
 @app.route('/api/personal/new', methods=['POST'])
 def new_personal():
+    """Agrega nuevo personal."""
     data = request.json
     if not data or 'nombre_completo' not in data or 'categoria' not in data:
         return jsonify({"error": "Nombre completo y categoría de personal son requeridos"}), 400
@@ -480,25 +507,225 @@ def new_personal():
 
 @app.route('/recibir-datos', methods=['POST'])
 def recibir_datos():
+    """Recibe los datos del reporte diario."""
     datos = request.json
     procesar_datos(datos)
     return jsonify({"status": "success"})
 
 @app.route('/recibir-requerimientos', methods=['POST'])
-def recibir_requerimientos_route(): # Corrected route name
+def recibir_requerimientos_route():
+    """Recibe los datos de requerimientos."""
     datos = request.json
-    print("Datos recibidos en /recibir-requerimientos:", datos) # Log received data
+    print("Datos recibidos en /recibir-requerimientos:", datos)
     procesar_requerimientos(datos)
     return jsonify({"status": "success"})
 
 @app.route('/descargar-excel', methods=['GET'])
 def descargar_excel_route():
+    """Descarga el archivo Excel principal."""
     return descargar_excel_flask()
 
 @app.route('/descargar-requerimientos-excel', methods=['GET'])
 def descargar_requerimientos_excel_route():
+    """Descarga el archivo Excel de requerimientos."""
     return descargar_requerimientos_excel_flask()
 
+# Funciones y rutas para la app de choferes
+def procesar_datos_choferes(data, files):
+    """Procesa los datos del formulario de choferes o solo guarda fotos si se proporciona un row_idx."""
+    try:
+        wb_choferes = openpyxl.load_workbook(REGISTROS_CHOFERES_EXCEL)
+        ws_choferes = wb_choferes.active
+
+        nombre_chofer = data.get("nombre_chofer")
+        placa = data.get("placa")
+        tipo_formulario = data.get("tipo_formulario")
+        row_idx = data.get("row_idx")  # Identificador de fila (opcional)
+
+        fecha_actual_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        foto_inicio = files.get("foto_km_inicial")
+        foto_fin = files.get("foto_km_final")
+
+        # Si solo se envía row_idx y foto (segunda solicitud para llegada)
+        if row_idx and not tipo_formulario:
+            try:
+                row_idx = int(row_idx)
+                if row_idx <= 1 or row_idx > ws_choferes.max_row:
+                    return False, "Índice de fila inválido."
+
+                # Leer la fecha de llegada desde el Excel
+                fecha_llegada_excel = ws_choferes.cell(row=row_idx, column=9).value
+                if isinstance(fecha_llegada_excel, datetime):
+                    fecha_llegada_filename = fecha_llegada_excel.strftime("%Y%m%d")
+                elif isinstance(fecha_llegada_excel, str):
+                    fecha_llegada_filename = fecha_llegada_excel.replace("-", "")
+                else:
+                    fecha_llegada_filename = datetime.now().strftime("%Y%m%d")  # Fallback
+
+                nombre_chofer_filename = data.get("nombre_chofer", "").lower().replace(" ", "-")
+                placa_filename = data.get("placa", "").replace(" ", "-")
+
+                for i in range(1, 5):
+                    foto_key = f"foto_km_final_{i}"
+                    foto_fin = files.get(foto_key)
+                    if foto_fin:
+                        original_extension = os.path.splitext(foto_fin.filename)[1] if foto_fin.filename else ".jpg"
+                        filename_fin = f"{nombre_chofer_filename}_{placa_filename}_{fecha_llegada_filename}_llegada_{i}{original_extension}"
+                        path_fin = os.path.join(FOTOS_KM_DIR, filename_fin)
+                        foto_fin.save(path_fin)
+                        logging.info(f"Foto de fin {i} guardada en {path_fin} para fila {row_idx}")
+                return True, "Fotos de llegada guardadas correctamente."
+            except ValueError:
+                return False, "Índice de fila debe ser un número entero."
+
+        # Lógica normal para formulario completo
+        if tipo_formulario == "salida":
+            fila_salida = [
+                nombre_chofer,
+                data.get("vehiculo"),
+                placa,
+                datetime.strptime(data.get("fecha_salida"), "%Y-%m-%d").date(),
+                data.get("hora_salida"),
+                data.get("ubicacion_inicial"),
+                data.get("km_inicial"),
+                data.get("observaciones_salida"),
+                None, None, None, None, None
+            ]
+            ws_choferes.append(fila_salida)
+            wb_choferes.save(REGISTROS_CHOFERES_EXCEL)
+            nombre_chofer_filename = data.get("nombre_chofer", "").lower().replace(" ", "-")
+            placa_filename = data.get("placa", "").replace(" ", "-")
+            fecha_salida_filename = data.get("fecha_salida", "").replace("-", "")
+            for i in range(1, 5):
+                foto_key = f"foto_km_inicial_{i}"
+                foto_inicio = files.get(foto_key)
+                if foto_inicio:
+                    original_extension = os.path.splitext(foto_inicio.filename)[1] if foto_inicio.filename else ".jpg"
+                    filename_inicio = f"{nombre_chofer_filename}_{placa_filename}_{fecha_salida_filename}_salida_{i}{original_extension}"
+                    path_inicio = os.path.join(FOTOS_KM_DIR, filename_inicio)
+                    foto_inicio.save(path_inicio)
+                    logging.info(f"Foto de inicio {i} guardada en {path_inicio}")
+            logging.info(f"Datos de salida guardados en nueva fila.")
+            return True, "Datos de salida guardados correctamente."
+
+        elif tipo_formulario == "llegada":
+            ultimo_registro = None
+            for row_idx in range(ws_choferes.max_row, 1, -1):
+                if (ws_choferes.cell(row=row_idx, column=1).value == nombre_chofer and
+                    ws_choferes.cell(row=row_idx, column=3).value == placa):
+                    ultimo_registro = row_idx
+                    break
+
+            if ultimo_registro:
+                if (ws_choferes.cell(row=ultimo_registro, column=9).value is None and
+                    ws_choferes.cell(row=ultimo_registro, column=10).value is None and
+                    ws_choferes.cell(row=ultimo_registro, column=11).value is None and
+                    ws_choferes.cell(row=ultimo_registro, column=12).value is None and
+                    ws_choferes.cell(row=ultimo_registro, column=13).value is None):
+                    ws_choferes.cell(row=ultimo_registro, column=9).value = datetime.strptime(data.get("fecha_llegada"), "%Y-%m-%d").date()
+                    ws_choferes.cell(row=ultimo_registro, column=10).value = data.get("hora_retorno")
+                    ws_choferes.cell(row=ultimo_registro, column=11).value = data.get("ubicacion_final")
+                    ws_choferes.cell(row=ultimo_registro, column=12).value = data.get("km_final")
+                    ws_choferes.cell(row=ultimo_registro, column=13).value = data.get("observaciones_llegada")
+                    wb_choferes.save(REGISTROS_CHOFERES_EXCEL)
+                    logging.info(f"Datos de llegada actualizados en fila {ultimo_registro}.")
+                    # Devolver el índice de la fila para usarlo en la segunda solicitud
+                    return True, "Datos de llegada actualizados correctamente.", ultimo_registro
+                else:
+                    return False, "El último registro ya tiene datos de llegada. No puedes actualizarlo."
+            else:
+                return False, "No has enviado el Formulario de Datos de Salida correspondiente."
+
+    except Exception as e:
+        logging.error(f"Error al procesar datos de choferes: {str(e)}")
+        return False, f"Error al procesar datos: {str(e)}"
+
+@app.route('/api/recibir_datos_choferes', methods=['POST'])
+def recibir_datos_choferes():
+    """Recibe datos o fotos del formulario de choferes."""
+    result = procesar_datos_choferes(request.form, request.files)
+    if len(result) == 3:  # Caso con row_idx
+        success, message, row_idx = result
+        if success:
+            return jsonify({"status": "success", "message": message, "row_idx": row_idx}), 200
+        else:
+            return jsonify({"status": "error", "message": message}), 400
+    else:  # Caso sin row_idx
+        success, message = result
+        if success:
+            return jsonify({"status": "success", "message": message}), 200
+        else:
+            return jsonify({"status": "error", "message": message}), 400
+
+
+@app.route('/api/conductores', methods=['GET'])
+def get_conductores():
+    """Obtiene la lista de conductores."""
+    try:
+        if not os.path.exists(CONDUCTORES_CSV_PATH):
+            return jsonify({"error": f"No se encontró el archivo de conductores"}), 404
+
+        df = pd.read_csv(CONDUCTORES_CSV_PATH)
+        if 'conductor' in df.columns:
+            conductores = df['conductor'].dropna().astype(str).tolist()
+        else:
+            conductores = []
+            logging.warning(f"La columna 'conductor' no se encontró en {CONDUCTORES_CSV_PATH}")
+        return jsonify(conductores)
+
+    except Exception as e:
+        logging.error(f"Error al leer el archivo de conductores: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/vehiculos_info', methods=['GET'])
+def get_vehiculos_info():
+    """Obtiene la información de los vehículos (tipo y placa)."""
+    try:
+        if not os.path.exists(VEHICULOS_INFO_CSV_PATH):
+            return jsonify({"error": f"No se encontró el archivo de vehículos"}), 404
+        df = pd.read_csv(VEHICULOS_INFO_CSV_PATH)
+        if 'tipo_vehiculo' in df.columns and 'placa' in df.columns:
+            vehiculos = df[['tipo_vehiculo', 'placa']].dropna().astype(str).to_dict('records')
+            return jsonify(vehiculos)
+        else:
+            missing_cols = []
+            if 'tipo_vehiculo' not in df.columns:
+                missing_cols.append('tipo_vehiculo')
+            if 'placa' not in df.columns:
+                missing_cols.append('placa')
+            logging.warning(f"Faltan columnas en {VEHICULOS_INFO_CSV_PATH}: {', '.join(missing_cols)}")
+            return jsonify({"error": f"Faltan columnas: {', '.join(missing_cols)}"}), 400
+
+    except Exception as e:
+        logging.error(f"Error al leer el archivo de vehículos: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/descargar-registro-rutas', methods=['GET'])
+def descargar_registro_rutas():
+    """Descarga el archivo Excel de registros de choferes."""
+    try:
+        logging.info(f"Intentando enviar archivo de registro de rutas: {REGISTROS_CHOFERES_EXCEL}")
+        return send_file(REGISTROS_CHOFERES_EXCEL, as_attachment=True, download_name='registros_choferes.xlsx')
+    except Exception as e:
+        logging.error(f"Error al generar descarga de Excel de registros de choferes: {str(e)}")
+        return str(e), 500
+
+@app.route('/descargar-carpeta-fotos', methods=['GET'])
+def descargar_carpeta_fotos():
+    """Comprime y descarga la carpeta de fotos de kilometraje."""
+    try:
+        zip_file_path = os.path.join(BASE_DIR, "fotos_km.zip")
+        with zipfile.ZipFile(zip_file_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, _, files in os.walk(FOTOS_KM_DIR):
+                for file in files:
+                    zipf.write(os.path.join(root, file),
+                               os.path.relpath(os.path.join(root, file),
+                                               os.path.join(FOTOS_KM_DIR, '..')))
+        logging.info(f"Intentando enviar carpeta de fotos comprimida: {zip_file_path}")
+        return send_file(zip_file_path, as_attachment=True, download_name='fotos_km.zip')
+    except Exception as e:
+        logging.error(f"Error al comprimir o descargar la carpeta de fotos: {str(e)}")
+        return str(e), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=True) # debug=True para desarrollo
