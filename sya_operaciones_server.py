@@ -4,10 +4,12 @@ import logging
 from datetime import datetime
 import pandas as pd
 import openpyxl
-from flask import Flask, request, jsonify, send_file, send_from_directory
+from flask import Flask, request, jsonify, send_file
 import zipfile
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Usar rutas absolutas
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -20,11 +22,15 @@ PERSONAL_CSV_PATH = os.path.join(BASE_DIR, "operaciones_personal.csv")
 
 # Archivo Excel y directorio para registros de choferes
 REGISTROS_CHOFERES_EXCEL = os.path.join(BASE_DIR, "registros_choferes.xlsx")
-FOTOS_KM_DIR = os.path.join(BASE_DIR, "fotos_km")
+FOTOS_VEHICULOS_DIR = os.path.join(BASE_DIR, "fotos_vehiculos")
 
 # Ruta al archivo CSV de conductores y vehiculos
 CONDUCTORES_CSV_PATH = os.path.join(BASE_DIR, "aem_conductores.csv")
 VEHICULOS_INFO_CSV_PATH = os.path.join(BASE_DIR, "aem_vehiculos.csv")
+
+# Archivos para el sistema de logística
+LOGISTICA_EXCEL_FILE = os.path.join(BASE_DIR, "sya_logistica_requerimientos.xlsx")
+LOGISTICA_MATERIALES_CSV_PATH = os.path.join(BASE_DIR, "logistica_materiales.csv")
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO,
@@ -79,18 +85,56 @@ def inicializar_excel():
         wb_choferes = openpyxl.Workbook()
         ws_choferes = wb_choferes.active
         ws_choferes.title = "Registros"
-        headers_choferes = ["Nombre del Chofer", "Vehículo", "Placa", "Fecha de Salida", "Hora de Salida",
-            "Ubicación Inicial", "Kilometraje Inicial", "Observaciones Salida", "Fecha de Llegada", "Hora de Retorno",
-            "Ubicación Final", "Kilometraje Final", "Observaciones Llegada"] # Headers actualizados
+        headers_choferes = [
+            "Fecha", "Nombre del Chofer", "Vehículo", "Placa", "Fecha de Salida",
+            "Hora de Salida", "Ubicación Inicial", "Kilometraje Inicial",
+            "Observaciones Salida", "Fecha de Llegada", "Hora de Retorno",
+            "Ubicación Final", "Kilometraje Final", "Observaciones Llegada"
+        ]
         ws_choferes.append(headers_choferes)
         wb_choferes.save(REGISTROS_CHOFERES_EXCEL)
     else:
         logging.info(f"El archivo Excel de registros de choferes ya existe en: {REGISTROS_CHOFERES_EXCEL}")
 
+    # Inicializar Excel de Logística
+    if not os.path.exists(LOGISTICA_EXCEL_FILE):
+        logging.info(f"Creando archivo Excel de logística en: {LOGISTICA_EXCEL_FILE}")
+        wb_logistica = openpyxl.Workbook()
+        ws_logistica = wb_logistica.active
+        ws_logistica.title = "Requerimientos"
+
+        # Definir cabeceras
+        cabeceras = [
+            "Fecha", "Solicitante", "Orden de Trabajo", "Cliente",
+            "Producto", "Unidad", "Cantidad", "Stock", "Adquirido",
+            "Saldo", "Observaciones"
+        ]
+
+        for col_num, header in enumerate(cabeceras, 1):
+            ws_logistica.cell(row=1, column=col_num).value = header
+
+        wb_logistica.save(LOGISTICA_EXCEL_FILE)
+        logging.info(f"Archivo Excel de logística creado exitosamente")
+    else:
+        logging.info(f"El archivo Excel de logística ya existe en: {LOGISTICA_EXCEL_FILE}")
+
+    # Inicializar CSV de Logística Materiales
+    if not os.path.exists(LOGISTICA_MATERIALES_CSV_PATH):
+        logging.info(f"Creando archivo CSV de materiales de logística en: {LOGISTICA_MATERIALES_CSV_PATH}")
+        try:
+            # Crear un DataFrame vacío con las cabeceras esperadas
+            df_materiales_logistica = pd.DataFrame(columns=['material', 'unidad'])
+            df_materiales_logistica.to_csv(LOGISTICA_MATERIALES_CSV_PATH, index=False)
+            logging.info(f"Archivo CSV de materiales de logística creado exitosamente con cabeceras.")
+        except Exception as e:
+            logging.error(f"No se pudo crear el archivo CSV de materiales de logística: {e}")
+    else:
+        logging.info(f"El archivo CSV de materiales de logística ya existe en: {LOGISTICA_MATERIALES_CSV_PATH}")
+
     # Crear directorio de fotos si no existe
-    if not os.path.exists(FOTOS_KM_DIR):
-        os.makedirs(FOTOS_KM_DIR)
-        logging.info(f"Directorio de fotos creado: {FOTOS_KM_DIR}")
+    if not os.path.exists(FOTOS_VEHICULOS_DIR):
+        os.makedirs(FOTOS_VEHICULOS_DIR)
+        logging.info(f"Directorio de fotos creado: {FOTOS_VEHICULOS_DIR}")
 
 def actualizar_cabeceras_materiales(ws, num_materiales):
     """Actualiza las cabeceras de la hoja de materiales."""
@@ -336,6 +380,87 @@ def descargar_requerimientos_excel_flask():
         logging.error(f"Error al generar descarga de Excel de requerimientos: {str(e)}")
         return str(e), 500
 
+def procesar_logistica_requerimientos(datos):
+    """Procesa los datos de requerimientos de logística y los guarda en el Excel."""
+    try:
+        # Asegurar que el archivo Excel existe
+        if not os.path.exists(LOGISTICA_EXCEL_FILE):
+            logging.info(f"Creando archivo Excel de logística: {LOGISTICA_EXCEL_FILE}")
+            wb_logistica = openpyxl.Workbook()
+            ws_logistica = wb_logistica.active
+            ws_logistica.title = "Requerimientos"
+
+            # Definir cabeceras
+            cabeceras = [
+                "Fecha", "Solicitante", "Orden de Trabajo", "Cliente",
+                "Producto", "Unidad", "Cantidad", "Stock", "Adquirido",
+                "Saldo", "Observaciones"
+            ]
+
+            for col_num, header in enumerate(cabeceras, 1):
+                ws_logistica.cell(row=1, column=col_num).value = header
+
+            wb_logistica.save(LOGISTICA_EXCEL_FILE)
+            logging.info("Archivo Excel de logística creado exitosamente")
+
+        # Cargar el archivo Excel existente
+        wb = openpyxl.load_workbook(LOGISTICA_EXCEL_FILE)
+        ws = wb["Requerimientos"]
+
+        # Obtener la última fila con datos
+        ultima_fila = ws.max_row
+
+        # Datos comunes para todos los productos
+        fecha = datos.get('fecha', '')
+        solicitante = datos.get('solicitante', '')
+        orden_trabajo = datos.get('orden_trabajo', '')
+        cliente = datos.get('cliente', '')
+
+        # Procesar cada producto en la lista
+        productos = datos.get('productos', [])
+        for producto in productos:
+            # Incrementar el número de fila
+            ultima_fila += 1
+
+            # Insertar datos en la fila
+            ws.cell(row=ultima_fila, column=1).value = fecha
+            ws.cell(row=ultima_fila, column=2).value = solicitante
+            ws.cell(row=ultima_fila, column=3).value = orden_trabajo
+            ws.cell(row=ultima_fila, column=4).value = cliente
+            ws.cell(row=ultima_fila, column=5).value = producto.get('producto', '')
+            ws.cell(row=ultima_fila, column=6).value = producto.get('unidad', '')
+            ws.cell(row=ultima_fila, column=7).value = producto.get('cantidad', 0.0)
+            # Las columnas 8, 9, 10 y 11 (Stock, Adquirido, Saldo y Observaciones) se dejan vacías
+
+        # Guardar el archivo Excel
+        wb.save(LOGISTICA_EXCEL_FILE)
+        logging.info(f"Requerimientos de logística recibidos de {solicitante} procesados exitosamente")
+        return True
+    except Exception as e:
+        logging.exception(f"Error al procesar requerimientos de logística: {str(e)}")
+        return False
+
+def descargar_logistica_excel_flask():
+    """Descarga el archivo Excel de logística."""
+    try:
+        logging.info(f"Intentando enviar archivo de logística: {LOGISTICA_EXCEL_FILE}")
+        return send_file(LOGISTICA_EXCEL_FILE, as_attachment=True, download_name='sya_logistica_requerimientos.xlsx')
+    except Exception as e:
+        logging.error(f"Error al generar descarga de Excel de logística: {str(e)}")
+        return str(e), 500
+
+def descargar_bdd_logistica_flask():
+    """Descarga el archivo CSV de la base de datos de materiales de logística."""
+    try:
+        if not os.path.exists(LOGISTICA_MATERIALES_CSV_PATH):
+            logging.error(f"Archivo BDD logística no encontrado: {LOGISTICA_MATERIALES_CSV_PATH}")
+            return jsonify({"error": "Archivo BDD de logística no encontrado en el servidor."}), 404
+        logging.info(f"Intentando enviar archivo BDD de logística: {LOGISTICA_MATERIALES_CSV_PATH}")
+        return send_file(LOGISTICA_MATERIALES_CSV_PATH, as_attachment=True, download_name='logistica_materiales.csv')
+    except Exception as e:
+        logging.error(f"Error al generar descarga de CSV BDD de logística: {str(e)}")
+        return jsonify({"error": f"Error interno del servidor: {str(e)}"}), 500
+
 
 def agregar_nuevo_material_csv(nombre_material, unidad):
     """Agrega un nuevo material al archivo CSV."""
@@ -542,49 +667,81 @@ def procesar_datos_choferes(data, files):
         tipo_formulario = data.get("tipo_formulario")
         row_idx = data.get("row_idx")  # Identificador de fila (opcional)
 
-        fecha_actual_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        foto_inicio = files.get("foto_km_inicial")
-        foto_fin = files.get("foto_km_final")
+        # Función para generar el nombre de la subcarpeta
+        def generar_nombre_subcarpeta(fecha_salida, nombre_chofer, placa):
+            fecha_salida_filename = fecha_salida.replace("-", "")
+            nombre_chofer_filename = nombre_chofer.lower().replace(" ", "-")
+            placa_filename = placa.replace(" ", "-")
+            return f"{fecha_salida_filename}_{nombre_chofer_filename}_{placa_filename}"
 
-        # Si solo se envía row_idx y foto (segunda solicitud para llegada)
+        # Si solo se envía row_idx y fotos (segunda solicitud para llegada)
         if row_idx and not tipo_formulario:
             try:
                 row_idx = int(row_idx)
                 if row_idx <= 1 or row_idx > ws_choferes.max_row:
                     return False, "Índice de fila inválido."
 
-                # Leer la fecha de llegada desde el Excel
-                fecha_llegada_excel = ws_choferes.cell(row=row_idx, column=9).value
-                if isinstance(fecha_llegada_excel, datetime):
-                    fecha_llegada_filename = fecha_llegada_excel.strftime("%Y%m%d")
-                elif isinstance(fecha_llegada_excel, str):
-                    fecha_llegada_filename = fecha_llegada_excel.replace("-", "")
+                # Obtener la fecha de salida desde el Excel (columna 5: Fecha de Salida)
+                fecha_salida_excel = ws_choferes.cell(row=row_idx, column=5).value
+                if isinstance(fecha_salida_excel, datetime):
+                    fecha_salida_str = fecha_salida_excel.strftime("%Y-%m-%d")
                 else:
-                    fecha_llegada_filename = datetime.now().strftime("%Y%m%d")  # Fallback
+                    fecha_salida_str = str(fecha_salida_excel)
 
-                nombre_chofer_filename = data.get("nombre_chofer", "").lower().replace(" ", "-")
-                placa_filename = data.get("placa", "").replace(" ", "-")
+                # Generar el nombre de la subcarpeta
+                subcarpeta_nombre = generar_nombre_subcarpeta(fecha_salida_str, nombre_chofer, placa)
+                subcarpeta_path = os.path.join(FOTOS_VEHICULOS_DIR, subcarpeta_nombre)
 
+                # Crear la subcarpeta si no existe
+                if not os.path.exists(subcarpeta_path):
+                    os.makedirs(subcarpeta_path)
+                    logging.info(f"Subcarpeta creada: {subcarpeta_path}")
+
+                # Guardar las fotos de llegada en la subcarpeta
                 for i in range(1, 5):
                     foto_key = f"foto_km_final_{i}"
                     foto_fin = files.get(foto_key)
                     if foto_fin:
                         original_extension = os.path.splitext(foto_fin.filename)[1] if foto_fin.filename else ".jpg"
-                        filename_fin = f"{nombre_chofer_filename}_{placa_filename}_{fecha_llegada_filename}_llegada_{i}{original_extension}"
-                        path_fin = os.path.join(FOTOS_KM_DIR, filename_fin)
+                        filename_fin = f"{subcarpeta_nombre}_llegada_{i}{original_extension}"
+                        path_fin = os.path.join(subcarpeta_path, filename_fin)
                         foto_fin.save(path_fin)
                         logging.info(f"Foto de fin {i} guardada en {path_fin} para fila {row_idx}")
                 return True, "Fotos de llegada guardadas correctamente."
             except ValueError:
                 return False, "Índice de fila debe ser un número entero."
 
-        # Lógica normal para formulario completo
+        # Lógica para formulario de salida
         if tipo_formulario == "salida":
+            fecha_salida = data.get("fecha_salida")
+            # Generar el nombre de la subcarpeta
+            subcarpeta_nombre = generar_nombre_subcarpeta(fecha_salida, nombre_chofer, placa)
+            subcarpeta_path = os.path.join(FOTOS_VEHICULOS_DIR, subcarpeta_nombre)
+
+            # Crear la subcarpeta si no existe
+            if not os.path.exists(subcarpeta_path):
+                os.makedirs(subcarpeta_path)
+                logging.info(f"Subcarpeta creada: {subcarpeta_path}")
+
+            # Guardar las fotos de salida en la subcarpeta
+            for i in range(1, 5):
+                foto_key = f"foto_km_inicial_{i}"
+                foto_inicio = files.get(foto_key)
+                if foto_inicio:
+                    original_extension = os.path.splitext(foto_inicio.filename)[1] if foto_inicio.filename else ".jpg"
+                    filename_inicio = f"{subcarpeta_nombre}_salida_{i}{original_extension}"
+                    path_inicio = os.path.join(subcarpeta_path, filename_inicio)
+                    foto_inicio.save(path_inicio)
+                    logging.info(f"Foto de inicio {i} guardada en {path_inicio}")
+
+            # Guardar los datos en el Excel
+            fecha_salida_date = datetime.strptime(fecha_salida, "%Y-%m-%d").date()
             fila_salida = [
+                fecha_salida_date,  # Fecha
                 nombre_chofer,
                 data.get("vehiculo"),
                 placa,
-                datetime.strptime(data.get("fecha_salida"), "%Y-%m-%d").date(),
+                fecha_salida_date,  # Fecha de Salida
                 data.get("hora_salida"),
                 data.get("ubicacion_inicial"),
                 data.get("km_inicial"),
@@ -593,43 +750,60 @@ def procesar_datos_choferes(data, files):
             ]
             ws_choferes.append(fila_salida)
             wb_choferes.save(REGISTROS_CHOFERES_EXCEL)
-            nombre_chofer_filename = data.get("nombre_chofer", "").lower().replace(" ", "-")
-            placa_filename = data.get("placa", "").replace(" ", "-")
-            fecha_salida_filename = data.get("fecha_salida", "").replace("-", "")
-            for i in range(1, 5):
-                foto_key = f"foto_km_inicial_{i}"
-                foto_inicio = files.get(foto_key)
-                if foto_inicio:
-                    original_extension = os.path.splitext(foto_inicio.filename)[1] if foto_inicio.filename else ".jpg"
-                    filename_inicio = f"{nombre_chofer_filename}_{placa_filename}_{fecha_salida_filename}_salida_{i}{original_extension}"
-                    path_inicio = os.path.join(FOTOS_KM_DIR, filename_inicio)
-                    foto_inicio.save(path_inicio)
-                    logging.info(f"Foto de inicio {i} guardada en {path_inicio}")
             logging.info(f"Datos de salida guardados en nueva fila.")
             return True, "Datos de salida guardados correctamente."
 
+        # Lógica para formulario de llegada
         elif tipo_formulario == "llegada":
             ultimo_registro = None
             for row_idx in range(ws_choferes.max_row, 1, -1):
-                if (ws_choferes.cell(row=row_idx, column=1).value == nombre_chofer and
-                    ws_choferes.cell(row=row_idx, column=3).value == placa):
+                if (ws_choferes.cell(row=row_idx, column=2).value == nombre_chofer and
+                    ws_choferes.cell(row=row_idx, column=4).value == placa):
                     ultimo_registro = row_idx
                     break
 
             if ultimo_registro:
-                if (ws_choferes.cell(row=ultimo_registro, column=9).value is None and
-                    ws_choferes.cell(row=ultimo_registro, column=10).value is None and
+                if (ws_choferes.cell(row=ultimo_registro, column=10).value is None and
                     ws_choferes.cell(row=ultimo_registro, column=11).value is None and
                     ws_choferes.cell(row=ultimo_registro, column=12).value is None and
-                    ws_choferes.cell(row=ultimo_registro, column=13).value is None):
-                    ws_choferes.cell(row=ultimo_registro, column=9).value = datetime.strptime(data.get("fecha_llegada"), "%Y-%m-%d").date()
-                    ws_choferes.cell(row=ultimo_registro, column=10).value = data.get("hora_retorno")
-                    ws_choferes.cell(row=ultimo_registro, column=11).value = data.get("ubicacion_final")
-                    ws_choferes.cell(row=ultimo_registro, column=12).value = data.get("km_final")
-                    ws_choferes.cell(row=ultimo_registro, column=13).value = data.get("observaciones_llegada")
+                    ws_choferes.cell(row=ultimo_registro, column=13).value is None and
+                    ws_choferes.cell(row=ultimo_registro, column=14).value is None):
+                    # Actualizar los datos de llegada en el Excel
+                    ws_choferes.cell(row=ultimo_registro, column=10).value = datetime.strptime(data.get("fecha_llegada"), "%Y-%m-%d").date()
+                    ws_choferes.cell(row=ultimo_registro, column=11).value = data.get("hora_retorno")
+                    ws_choferes.cell(row=ultimo_registro, column=12).value = data.get("ubicacion_final")
+                    ws_choferes.cell(row=ultimo_registro, column=13).value = data.get("km_final")
+                    ws_choferes.cell(row=ultimo_registro, column=14).value = data.get("observaciones_llegada")
                     wb_choferes.save(REGISTROS_CHOFERES_EXCEL)
                     logging.info(f"Datos de llegada actualizados en fila {ultimo_registro}.")
-                    # Devolver el índice de la fila para usarlo en la segunda solicitud
+
+                    # Obtener la fecha de salida desde el Excel (columna 5: Fecha de Salida)
+                    fecha_salida_excel = ws_choferes.cell(row=ultimo_registro, column=5).value
+                    if isinstance(fecha_salida_excel, datetime):
+                        fecha_salida_str = fecha_salida_excel.strftime("%Y-%m-%d")
+                    else:
+                        fecha_salida_str = str(fecha_salida_excel)
+
+                    # Generar el nombre de la subcarpeta
+                    subcarpeta_nombre = generar_nombre_subcarpeta(fecha_salida_str, nombre_chofer, placa)
+                    subcarpeta_path = os.path.join(FOTOS_VEHICULOS_DIR, subcarpeta_nombre)
+
+                    # Crear la subcarpeta si no existe (aunque debería existir desde la salida)
+                    if not os.path.exists(subcarpeta_path):
+                        os.makedirs(subcarpeta_path)
+                        logging.info(f"Subcarpeta creada: {subcarpeta_path}")
+
+                    # Guardar las fotos de llegada en la subcarpeta
+                    for i in range(1, 5):
+                        foto_key = f"foto_km_final_{i}"
+                        foto_fin = files.get(foto_key)
+                        if foto_fin:
+                            original_extension = os.path.splitext(foto_fin.filename)[1] if foto_fin.filename else ".jpg"
+                            filename_fin = f"{subcarpeta_nombre}_llegada_{i}{original_extension}"
+                            path_fin = os.path.join(subcarpeta_path, filename_fin)
+                            foto_fin.save(path_fin)
+                            logging.info(f"Foto de fin {i} guardada en {path_fin} para fila {ultimo_registro}")
+
                     return True, "Datos de llegada actualizados correctamente.", ultimo_registro
                 else:
                     return False, "El último registro ya tiene datos de llegada. No puedes actualizarlo."
@@ -710,22 +884,132 @@ def descargar_registro_rutas():
         logging.error(f"Error al generar descarga de Excel de registros de choferes: {str(e)}")
         return str(e), 500
 
+@app.route('/api/listar-carpetas-fotos', methods=['GET'])
+def listar_carpetas_fotos():
+    """Devuelve la lista de carpetas con el número de fotos en cada una."""
+    try:
+        carpetas = {}
+        for nombre in os.listdir(FOTOS_VEHICULOS_DIR):
+            carpeta_path = os.path.join(FOTOS_VEHICULOS_DIR, nombre)
+            if os.path.isdir(carpeta_path):
+                num_fotos = len([f for f in os.listdir(carpeta_path) if os.path.isfile(os.path.join(carpeta_path, f))])
+                carpetas[nombre] = num_fotos
+        return jsonify(carpetas)
+    except Exception as e:
+        logging.error(f"Error al listar carpetas de fotos: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/descargar-carpeta-fotos/<nombre_carpeta>', methods=['GET'])
+def descargar_carpeta_fotos_especifica(nombre_carpeta):
+    """Comprime y descarga una carpeta específica de fotos_vehiculos."""
+    try:
+        carpeta_path = os.path.join(FOTOS_VEHICULOS_DIR, nombre_carpeta)
+        if not os.path.exists(carpeta_path) or not os.path.isdir(carpeta_path):
+            return jsonify({"error": "Carpeta no encontrada"}), 404
+
+        zip_file_path = os.path.join(BASE_DIR, f"{nombre_carpeta}.zip")
+        with zipfile.ZipFile(zip_file_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, _, files in os.walk(carpeta_path):
+                for file in files:
+                    zipf.write(os.path.join(root, file),
+                              os.path.relpath(os.path.join(root, file),
+                                             os.path.join(carpeta_path, '..')))
+
+        # Enviar el archivo ZIP al cliente
+        response = send_file(zip_file_path, as_attachment=True, download_name=f"{nombre_carpeta}.zip")
+
+        # Eliminar el archivo ZIP después de enviarlo
+        os.remove(zip_file_path)
+        logging.info(f"Archivo ZIP temporal eliminado: {zip_file_path}")
+
+        return response
+    except Exception as e:
+        logging.error(f"Error al comprimir o descargar la carpeta {nombre_carpeta}: {str(e)}")
+        return str(e), 500
+
 @app.route('/descargar-carpeta-fotos', methods=['GET'])
 def descargar_carpeta_fotos():
     """Comprime y descarga la carpeta de fotos de kilometraje."""
     try:
-        zip_file_path = os.path.join(BASE_DIR, "fotos_km.zip")
+        zip_file_path = os.path.join(BASE_DIR, "fotos_vehiculos.zip")
         with zipfile.ZipFile(zip_file_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for root, _, files in os.walk(FOTOS_KM_DIR):
+            for root, _, files in os.walk(FOTOS_VEHICULOS_DIR):
                 for file in files:
                     zipf.write(os.path.join(root, file),
                                os.path.relpath(os.path.join(root, file),
-                                               os.path.join(FOTOS_KM_DIR, '..')))
+                                               os.path.join(FOTOS_VEHICULOS_DIR, '..')))
         logging.info(f"Intentando enviar carpeta de fotos comprimida: {zip_file_path}")
-        return send_file(zip_file_path, as_attachment=True, download_name='fotos_km.zip')
+        return send_file(zip_file_path, as_attachment=True, download_name='fotos_vehiculos.zip')
     except Exception as e:
         logging.error(f"Error al comprimir o descargar la carpeta de fotos: {str(e)}")
         return str(e), 500
 
+
+# API endpoints para el sistema de logística
+@app.route('/api/logistica/materiales', methods=['GET'])
+def obtener_materiales_logistica():
+    """Devuelve la lista de materiales desde el archivo CSV de logística."""
+    try:
+        if os.path.exists(LOGISTICA_MATERIALES_CSV_PATH):
+            df = pd.read_csv(LOGISTICA_MATERIALES_CSV_PATH)
+            materiales = df[['material', 'unidad']].to_dict('records')
+            return jsonify(materiales)
+        else:
+            return jsonify({"error": "Archivo de materiales de logística no encontrado"}), 404
+    except Exception as e:
+        logging.exception(f"Error al obtener materiales de logística: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/logistica/enviar-requerimientos', methods=['POST'])
+def recibir_requerimientos_logistica():
+    """Recibe los datos de requerimientos desde la app Android de logística."""
+    try:
+        datos = request.json
+        logging.info(f"Datos de logística recibidos: {datos}")
+
+        if procesar_logistica_requerimientos(datos):
+            return jsonify({"status": "success", "message": "Requerimientos procesados correctamente"}), 200
+        else:
+            return jsonify({"status": "error", "message": "Error al procesar requerimientos"}), 500
+    except Exception as e:
+        logging.exception(f"Error al recibir requerimientos de logística: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/logistica/descargar-requerimientos', methods=['GET'])
+def descargar_requerimientos_logistica():
+    """Descarga el archivo Excel de requerimientos de logística."""
+    return descargar_logistica_excel_flask()
+
+@app.route('/api/logistica/descargar-bdd', methods=['GET'])
+def descargar_bdd_logistica():
+    """Descarga el archivo CSV de la base de datos de materiales de logística."""
+    return descargar_bdd_logistica_flask()
+
+@app.route('/api/logistica/subir-bdd', methods=['POST'])
+def subir_bdd_logistica():
+    """Sube (actualiza) el archivo CSV de la base de datos de materiales de logística."""
+    if 'file' not in request.files:
+        logging.warning("No se encontró 'file' en la solicitud de subida de BDD.")
+        return jsonify({"error": "No se encontró el archivo en la solicitud"}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        logging.warning("Nombre de archivo vacío en la solicitud de subida de BDD.")
+        return jsonify({"error": "Nombre de archivo vacío"}), 400
+    
+    if file and file.filename.endswith('.csv'):
+        try:
+            # Guardar el archivo, sobrescribiendo el existente
+            file.save(LOGISTICA_MATERIALES_CSV_PATH)
+            logging.info(f"Archivo BDD de logística '{file.filename}' subido y guardado como '{LOGISTICA_MATERIALES_CSV_PATH}'")
+            return jsonify({"status": "success", "message": "Base de datos de materiales actualizada correctamente."}), 200
+        except Exception as e:
+            logging.error(f"Error al guardar el archivo BDD de logística subido: {str(e)}")
+            return jsonify({"error": f"Error al guardar el archivo en el servidor: {str(e)}"}), 500
+    else:
+        logging.warning(f"Archivo no válido o tipo incorrecto para subida de BDD: {file.filename}")
+        return jsonify({"error": "Archivo no válido o tipo incorrecto. Se esperaba un archivo .csv"}), 400
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True) # debug=True para desarrollo
+    app.run(host='0.0.0.0', port=5000, debug=False) # debug=True para desarrollo
